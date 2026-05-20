@@ -107,7 +107,7 @@
     let questionCount = 0;
     let answerCount = 0;
     let responseTimes = [];
-    let lastProcessedFinal = '';
+    let lastFinalIndex = -1;
     
     startBtn.addEventListener('click', () => {
       isListening = true;
@@ -116,6 +116,7 @@
       transcriptContent.innerHTML = '';
       answerContent.innerHTML = '';
       transcriptStatus.textContent = 'Recording...';
+      lastFinalIndex = -1;
       recognition.start();
     });
     
@@ -133,28 +134,27 @@
       }
       
       let interimText = '';
-      let finalText = '';
+      let newFinalText = '';
       
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalText += transcript + ' ';
+          if (i > lastFinalIndex) {
+            lastFinalIndex = i;
+            newFinalText += transcript + ' ';
+          }
         } else {
           interimText += transcript;
         }
       }
       
-      if (finalText.trim()) {
-        const cleanFinal = finalText.trim();
-        if (cleanFinal !== lastProcessedFinal) {
-          lastProcessedFinal = cleanFinal;
-          addTranscriptItem('Customer', cleanFinal);
-          
-          questionCount++;
-          qCount.textContent = questionCount;
-          
-          processAnswerForQuestion(cleanFinal);
-        }
+      if (newFinalText.trim()) {
+        addTranscriptItem('Customer', newFinalText.trim());
+        
+        questionCount++;
+        qCount.textContent = questionCount;
+        
+        processAnswerForQuestion(newFinalText.trim());
       }
       
       if (interimText.trim()) {
@@ -172,11 +172,13 @@
     
     function updateLastTranscript(interimText) {
       let lastItem = transcriptContent.querySelector('.transcript-item:last-child');
-      if (!lastItem) return;
-      
+      if (!lastItem) {
+        addTranscriptItem('Customer', interimText + ' (typing...)');
+        return;
+      }
       const textDiv = lastItem.querySelector('.transcript-text');
-      if (textDiv && !lastItem.classList.contains('final')) {
-        textDiv.textContent = interimText + ' (listening...)';
+      if (textDiv) {
+        textDiv.textContent = interimText + ' (typing...)';
       }
     }
     
