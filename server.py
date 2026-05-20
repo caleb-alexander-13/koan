@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from pydantic import BaseModel
 import asyncio
 from dotenv import load_dotenv
 from retrieval_pipeline import KoanAssistant
@@ -21,6 +22,9 @@ app.add_middleware(
 
 active_sessions = {}
 
+class AnswerRequest(BaseModel):
+    text: str
+
 @app.get("/")
 async def root():
     return {"status": "Koan server is running", "version": "0.1.0"}
@@ -33,6 +37,12 @@ async def health():
 async def get_sidebar():
     with open("sidebar.html") as f:
         return Response(content=f.read(), media_type="text/html")
+
+@app.post("/api/answer")
+async def get_answer(request: AnswerRequest):
+    assistant = KoanAssistant()
+    result = assistant.process_transcript_chunk(text=request.text, speaker="user")
+    return result if result else {"error": "No answer found", "confidence": 0}
 
 @app.websocket("/ws/zoom/{meeting_id}")
 async def websocket_endpoint(websocket: WebSocket, meeting_id: str):
