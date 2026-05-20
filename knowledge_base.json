@@ -1,0 +1,13 @@
+{
+  "venue": "Cavalli",
+  "facts": [
+    {"topic": "capacity", "text": "Cavalli can accommodate up to 150 guests for both indoor and outdoor setups"},
+    {"topic": "pricing", "text": "Pricing starts at $15,000-$18,000 all-inclusive with tables, chairs, dinnerware, dance floor, and WiFi included"},
+    {"topic": "catering", "text": "Cavalli works with preferred vendor list for catering. The venue provides prep and heating space only"},
+    {"topic": "alcohol", "text": "Alcohol is allowed with a day-of permit. BYOB is not permitted"},
+    {"topic": "noise", "text": "Amplified music must stop by 10pm. Hard venue close is 11pm"},
+    {"topic": "fireworks", "text": "Fireworks are not permitted. Alternatives include LED displays and sparklers"},
+    {"topic": "weather", "text": "Indoor ceremony backup is available in case of bad weather"},
+    {"topic": "cancellation", "text": "Cancellation policy: 20% fee applies"}
+  ]
+}

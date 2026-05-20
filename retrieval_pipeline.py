@@ -1,28 +1,28 @@
 import json
 import os
 from anthropic import Anthropic
-from pinecone import Pinecone
 
 class KoanAssistant:
     def __init__(self):
         self.client = Anthropic()
-        self.pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-        self.index = self.pc.Index(os.getenv("PINECONE_INDEX", "cavalli-knowledge"))
-        self.transcript_buffer = []
         
+        # Load knowledge base
+        with open('knowledge_base.json') as f:
+            self.kb = json.load(f)
+    
     def process_transcript_chunk(self, text, speaker):
-        self.transcript_buffer.append({"speaker": speaker, "text": text})
-        
         # Check if this looks like a question
-        if not any(q in text.lower() for q in ["?", "what", "how", "when", "where", "why"]):
+        if not any(q in text.lower() for q in ["?", "what", "how", "when", "where", "why", "can", "do", "are"]):
             return None
         
-        # Get answer from vector DB
-        try:
-            results = self.index.query(text, top_k=3, include_metadata=True)
-            context = "\n".join([m["metadata"].get("text", "") for m in results.get("matches", [])])
-        except:
-            context = ""
+        # Simple keyword matching for context
+        text_lower = text.lower()
+        matching_facts = []
+        for fact in self.kb['facts']:
+            if any(keyword in text_lower for keyword in fact['text'].lower().split()):
+                matching_facts.append(fact['text'])
+        
+        context = "\n".join(matching_facts) if matching_facts else ""
         
         if not context:
             return None
@@ -34,13 +34,13 @@ class KoanAssistant:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Answer this question based on the context below. Be concise.\n\nQuestion: {text}\n\nContext: {context}"
+                    "content": f"Answer this question concisely based on the context. Question: {text}\n\nContext: {context}"
                 }
             ]
         )
         
         answer = response.content[0].text
-        confidence = 75  # Placeholder
+        confidence = 75
         
         return {
             "question": text,
