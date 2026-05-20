@@ -5,7 +5,7 @@ from anthropic import Anthropic
 class KoanAssistant:
     def __init__(self, knowledge_base_path="knowledge_base.json"):
         self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        self.model = "claude-opus-4-20250805"
+        self.model = "claude-haiku-4-5-20251001"  # Fastest model
         
         try:
             with open(knowledge_base_path, 'r') as f:
