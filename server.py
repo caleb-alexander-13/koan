@@ -38,6 +38,11 @@ async def get_sidebar():
     with open("sidebar.html") as f:
         return Response(content=f.read(), media_type="text/html")
 
+@app.get("/voice.html")
+async def get_voice_app():
+    with open("voice_app.html") as f:
+        return Response(content=f.read(), media_type="text/html")
+
 @app.post("/api/answer")
 async def get_answer(request: AnswerRequest):
     assistant = KoanAssistant()
