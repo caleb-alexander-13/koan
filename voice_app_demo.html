@@ -2,43 +2,222 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Koan Demo</title>
+  <title>Koan - Real-Time Call Assistant</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f172a; min-height: 100vh; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
-    .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
-    .panel { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 20px; }
-    .panel h2 { font-size: 16px; margin-bottom: 12px; }
-    .content { min-height: 400px; background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 12px; overflow-y: auto; font-size: 14px; }
-    .item { margin-bottom: 12px; padding: 10px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; }
-    .answer { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border: 2px solid #10b981; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-    .ans-primary { font-size: 20px; font-weight: 700; color: #059669; margin: 8px 0; }
-    .ans-detail { font-size: 12px; color: #0d8659; margin-top: 8px; }
-    .button { padding: 10px 16px; margin-right: 8px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    .btn-primary { background: #2563eb; color: white; }
-    .btn-secondary { background: #e5e7eb; color: #333; }
-    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
-    .stat { text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; }
-    .stat-num { font-size: 24px; font-weight: 700; color: #2563eb; }
-    .stat-label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+    .header {
+      background: #1a1a1a;
+      color: white;
+      padding: 24px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      font-size: 20px;
+    }
+    .header-text h1 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+    .header-text p {
+      font-size: 13px;
+      color: #999;
+      margin-top: 4px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 32px 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .panel {
+      background: white;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      padding: 20px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fafafa;
+    }
+    .panel-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      min-height: 400px;
+      background: white;
+    }
+    .item {
+      margin-bottom: 12px;
+      padding: 12px;
+      background: #f8f8f8;
+      border-left: 3px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #333;
+    }
+    .answer {
+      background: #f0f9ff;
+      border: 1px solid #bfdbfe;
+      border-left: 3px solid #2563eb;
+      border-radius: 4px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .ans-question {
+      font-size: 12px;
+      color: #1e40af;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .ans-primary {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e40af;
+      margin: 6px 0;
+    }
+    .ans-detail {
+      font-size: 13px;
+      color: #1e40af;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .ans-time {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+    .controls {
+      padding: 20px;
+      border-top: 1px solid #f0f0f0;
+      background: #fafafa;
+      display: flex;
+      gap: 12px;
+    }
+    .button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: white;
+      color: #1a1a1a;
+      border: 1px solid #d1d5db;
+    }
+    .btn-secondary:hover { background: #f9fafb; }
+    .btn-secondary:disabled {
+      background: #f3f4f6;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      padding: 20px;
+      border-top: 1px solid #f0f0f0;
+      background: #fafafa;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2563eb;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #6b7280;
+      text-transform: uppercase;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+    .empty {
+      color: #999;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>Koan Live Demo</h1>
-    <p>Transcript + AI Answers in Real-Time</p>
+    <div class="header-inner">
+      <div class="logo">◆</div>
+      <div class="header-text">
+        <h1>Koan</h1>
+        <p>Real-time answers for live calls</p>
+      </div>
+    </div>
   </div>
+
   <div class="container">
     <div class="panel">
-      <h2>Live Transcript</h2>
-      <div class="content" id="transcript">Ready to start</div>
-      <button class="button btn-primary" id="startBtn" onclick="startListening()">START</button>
-      <button class="button btn-secondary" id="stopBtn" onclick="stopListening()" disabled>STOP</button>
+      <div class="panel-header">
+        <h2>Live Transcript</h2>
+      </div>
+      <div class="content" id="transcript">
+        <div class="empty">Click START to begin listening...</div>
+      </div>
+      <div class="controls">
+        <button class="button btn-primary" id="startBtn" onclick="startListening()">START</button>
+        <button class="button btn-secondary" id="stopBtn" onclick="stopListening()" disabled>STOP</button>
+      </div>
     </div>
+
     <div class="panel">
-      <h2>Agent Answers</h2>
-      <div class="content" id="answers">Waiting...</div>
+      <div class="panel-header">
+        <h2>Agent Answers</h2>
+      </div>
+      <div class="content" id="answers">
+        <div class="empty">Answers will appear here...</div>
+      </div>
       <div class="stats">
         <div class="stat"><div class="stat-num" id="q">0</div><div class="stat-label">Questions</div></div>
         <div class="stat"><div class="stat-num" id="a">0</div><div class="stat-label">Answers</div></div>
@@ -84,7 +263,7 @@
       
       if (final.trim()) {
         const tr = document.getElementById('transcript');
-        if (tr.textContent === 'Ready to start') tr.innerHTML = '';
+        if (tr.querySelector('.empty')) tr.innerHTML = '';
         const d = document.createElement('div');
         d.className = 'item';
         d.textContent = final.trim();
@@ -102,11 +281,11 @@
           const time = Date.now() - st;
           if (data.answer) {
             const ar = document.getElementById('answers');
-            if (ar.textContent === 'Waiting...') ar.innerHTML = '';
+            if (ar.querySelector('.empty')) ar.innerHTML = '';
             const p = data.answer.split('\n...\n');
             const e = document.createElement('div');
             e.className = 'answer';
-            e.innerHTML = '<div style="font-size:12px;color:#059669;font-weight:700;">Q: ' + final.substring(0,40) + '</div><div class="ans-primary">' + p[0].trim() + '</div>' + (p[1] ? '<div class="ans-detail">' + p[1].trim() + '</div>' : '') + '<div style="font-size:11px;color:#0d8659;margin-top:8px;">' + time + 'ms</div>';
+            e.innerHTML = '<div class="ans-question">Q: ' + final.substring(0, 50) + (final.length > 50 ? '...' : '') + '</div><div class="ans-primary">' + p[0].trim() + '</div>' + (p[1] ? '<div class="ans-detail">' + p[1].trim() + '</div>' : '') + '<div class="ans-time">' + time + 'ms</div>';
             ar.insertBefore(e, ar.firstChild);
             
             ac++;
