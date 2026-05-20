@@ -81,3 +81,13 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 3000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+@app.get("/demo")
+async def get_demo():
+    with open("voice_app_demo.html") as f:
+        return Response(content=f.read(), media_type="text/html")
+
+@app.get("/demo")
+async def get_demo():
+    with open("voice_app_demo.html") as f:
+        return Response(content=f.read(), media_type="text/html")
