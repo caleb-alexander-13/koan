@@ -1,15 +1,17 @@
 import json
+import os
 from anthropic import Anthropic
 
 class KoanAssistant:
     def __init__(self, knowledge_base_path="knowledge_base.json"):
-        self.client = Anthropic()
+        self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self.model = "claude-opus-4-20250805"
         
         try:
             with open(knowledge_base_path, 'r') as f:
                 self.kb = json.load(f)
-        except:
+        except Exception as e:
+            print(f"KB load error: {e}")
             self.kb = {"facts": []}
     
     def retrieve(self, query):
@@ -47,7 +49,8 @@ Answer:"""
             )
             answer = response.content[0].text.strip()
         except Exception as e:
-            answer = "Unable to generate answer"
+            answer = f"ERROR: {str(e)}"
+            print(f"API call failed: {e}")
         
         return {
             "question": question,
