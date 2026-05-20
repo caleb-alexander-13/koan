@@ -2,33 +2,26 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Koan Demo</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f172a; min-height: 100vh; }
     .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
     .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
-    .panel { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
-    .panel-header { background: #f3f4f6; padding: 16px; border-bottom: 2px solid #e5e7eb; }
-    .panel-header h2 { font-size: 14px; font-weight: 700; color: #1f2937; }
-    .panel-content { flex: 1; overflow-y: auto; padding: 16px; min-height: 400px; }
-    .item { margin-bottom: 12px; padding: 12px; border-radius: 8px; background: #eff6ff; border-left: 3px solid #3b82f6; }
-    .speaker { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
-    .text { font-size: 14px; color: #1f2937; line-height: 1.6; }
-    .answer-item { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border: 2px solid #10b981; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
-    .answer-q { font-size: 12px; color: #059669; font-weight: 700; margin-bottom: 8px; }
-    .answer-primary { font-size: 24px; font-weight: 700; color: #059669; margin: 12px 0; }
-    .answer-detail { font-size: 12px; color: #0d8659; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(16, 185, 129, 0.2); }
-    .answer-meta { font-size: 11px; color: #0d8659; margin-top: 8px; }
-    .controls { background: #f9fafb; padding: 16px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; }
-    .btn { flex: 1; padding: 12px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .panel { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 20px; }
+    .panel h2 { font-size: 16px; margin-bottom: 12px; }
+    .content { min-height: 400px; background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 12px; overflow-y: auto; font-size: 14px; }
+    .item { margin-bottom: 12px; padding: 10px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; }
+    .answer { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border: 2px solid #10b981; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .ans-primary { font-size: 20px; font-weight: 700; color: #059669; margin: 8px 0; }
+    .ans-detail { font-size: 12px; color: #0d8659; margin-top: 8px; }
+    .button { padding: 10px 16px; margin-right: 8px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
     .btn-primary { background: #2563eb; color: white; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 16px; background: #f9fafb; border-top: 1px solid #e5e7eb; }
-    .stat { text-align: center; }
-    .stat-label { font-size: 11px; color: #6b7280; font-weight: 600; }
-    .stat-value { font-size: 24px; font-weight: 700; color: #2563eb; margin-top: 4px; }
+    .btn-secondary { background: #e5e7eb; color: #333; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .stat { text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; }
+    .stat-num { font-size: 24px; font-weight: 700; color: #2563eb; }
+    .stat-label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
   </style>
 </head>
 <body>
@@ -38,171 +31,95 @@
   </div>
   <div class="container">
     <div class="panel">
-      <div class="panel-header">
-        <h2>Live Transcript</h2>
-      </div>
-      <div class="panel-content" id="transcriptContent">
-        <div style="text-align: center; color: #9ca3af; padding: 20px;">Ready to start</div>
-      </div>
-      <div class="controls">
-        <button class="btn btn-primary" id="startBtn" onclick="startListening()">START LISTENING</button>
-        <button class="btn" id="stopBtn" style="background: #e5e7eb; color: #374151;" onclick="stopListening()" disabled>STOP</button>
-      </div>
+      <h2>Live Transcript</h2>
+      <div class="content" id="transcript">Waiting...</div>
+      <button class="button btn-primary" onclick="start()">START</button>
+      <button class="button btn-secondary" onclick="stop()">STOP</button>
     </div>
     <div class="panel">
-      <div class="panel-header">
-        <h2>Agent Answers</h2>
-      </div>
-      <div class="panel-content" id="answerContent">
-        <div style="text-align: center; color: #9ca3af; padding: 20px;">Waiting for questions...</div>
-      </div>
+      <h2>Agent Answers</h2>
+      <div class="content" id="answers">Waiting...</div>
       <div class="stats">
-        <div class="stat">
-          <div class="stat-label">Questions</div>
-          <div class="stat-value" id="qCount">0</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">Answers</div>
-          <div class="stat-value" id="aCount">0</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">Avg Speed</div>
-          <div class="stat-value" id="avgSpeed">—</div>
-        </div>
+        <div class="stat"><div class="stat-num" id="q">0</div><div class="stat-label">Questions</div></div>
+        <div class="stat"><div class="stat-num" id="a">0</div><div class="stat-label">Answers</div></div>
+        <div class="stat"><div class="stat-num" id="s">—</div><div class="stat-label">Avg Speed</div></div>
       </div>
     </div>
   </div>
 
   <script>
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+    r.lang = 'en-US';
     
-    let isListening = false;
-    let qCount = 0;
-    let aCount = 0;
-    let times = [];
-    let lastFinalIndex = -1;
+    let on = false, qc = 0, ac = 0, ts = [], lfi = -1;
     
-    function startListening() {
-      isListening = true;
-      document.getElementById('startBtn').disabled = true;
-      document.getElementById('stopBtn').disabled = false;
-      document.getElementById('transcriptContent').innerHTML = '';
-      document.getElementById('answerContent').innerHTML = '';
-      qCount = 0;
-      aCount = 0;
-      times = [];
-      lastFinalIndex = -1;
-      document.getElementById('qCount').textContent = '0';
-      document.getElementById('aCount').textContent = '0';
-      document.getElementById('avgSpeed').textContent = '—';
-      recognition.start();
+    function start() {
+      on = true;
+      qc = ac = 0;
+      ts = [];
+      lfi = -1;
+      document.getElementById('transcript').innerHTML = '';
+      document.getElementById('answers').innerHTML = '';
+      r.start();
     }
     
-    function stopListening() {
-      isListening = false;
-      recognition.stop();
-      document.getElementById('startBtn').disabled = false;
-      document.getElementById('stopBtn').disabled = true;
+    function stop() {
+      on = false;
+      r.stop();
     }
     
-    recognition.onresult = function(event) {
-      let interim = '';
-      let finalText = '';
-      
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          if (i > lastFinalIndex) {
-            lastFinalIndex = i;
-            finalText += t + ' ';
+    r.onresult = function(e) {
+      let interim = '', final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          if (i > lfi) {
+            lfi = i;
+            final += t + ' ';
           }
         } else {
           interim += t;
         }
       }
       
-      if (finalText.trim()) {
-        addTranscript(finalText.trim());
-        qCount++;
-        document.getElementById('qCount').textContent = qCount;
-        getAnswer(finalText.trim());
-      }
-      
-      if (interim.trim()) {
-        updateTranscript(interim);
+      if (final.trim()) {
+        const tr = document.getElementById('transcript');
+        if (tr.textContent === 'Waiting...') tr.innerHTML = '';
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.textContent = final.trim();
+        tr.appendChild(d);
+        tr.scrollTop = tr.scrollHeight;
+        
+        qc++;
+        document.getElementById('q').textContent = qc;
+        
+        fetch('https://koan-0tws.onrender.com/api/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: final.trim() })
+        }).then(r => r.json()).then(d => {
+          if (d.answer) {
+            const ar = document.getElementById('answers');
+            if (ar.textContent === 'Waiting...') ar.innerHTML = '';
+            const p = d.answer.split('\n...\n');
+            const e = document.createElement('div');
+            e.className = 'answer';
+            e.innerHTML = '<div style="font-size:12px;color:#059669;font-weight:700;">Q: ' + final.substring(0,40) + '...</div><div class="ans-primary">' + p[0].trim() + '</div>' + (p[1] ? '<div class="ans-detail">' + p[1].trim() + '</div>' : '');
+            ar.insertBefore(e, ar.firstChild);
+            
+            ac++;
+            document.getElementById('a').textContent = ac;
+          }
+        }).catch(e => console.error(e));
       }
     };
     
-    function addTranscript(text) {
-      const content = document.getElementById('transcriptContent');
-      if (content.textContent.includes('Ready to start')) {
-        content.innerHTML = '';
-      }
-      const item = document.createElement('div');
-      item.className = 'item';
-      item.innerHTML = '<div class="speaker">Customer</div><div class="text">' + text + '</div>';
-      content.appendChild(item);
-      content.scrollTop = content.scrollHeight;
-    }
-    
-    function updateTranscript(text) {
-      const last = document.querySelector('#transcriptContent .item:last-child');
-      if (last) {
-        last.querySelector('.text').textContent = text + ' (typing...)';
-      }
-    }
-    
-    async function getAnswer(question) {
-      const start = Date.now();
-      try {
-        const res = await fetch('https://koan-0tws.onrender.com/api/answer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: question })
-        });
-        const data = await res.json();
-        const time = Date.now() - start;
-        times.push(time);
-        
-        if (data.answer) {
-          aCount++;
-          document.getElementById('aCount').textContent = aCount;
-          const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
-          document.getElementById('avgSpeed').textContent = avg + 'ms';
-          showAnswer(question, data.answer, data.confidence, time);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    
-    function showAnswer(q, a, conf, time) {
-      const content = document.getElementById('answerContent');
-      if (content.textContent.includes('Waiting')) {
-        content.innerHTML = '';
-      }
-      const parts = a.split('\n...\n');
-      const primary = parts[0].trim();
-      const detail = parts[1] ? parts[1].trim() : '';
-      
-      const item = document.createElement('div');
-      item.className = 'answer-item';
-      let html = '<div class="answer-q">Q: ' + q.substring(0, 50) + '</div>';
-      html += '<div class="answer-primary">' + primary + '</div>';
-      if (detail) {
-        html += '<div class="answer-detail">' + detail + '</div>';
-      }
-      html += '<div class="answer-meta">Confidence: ' + conf + '% • ' + time + 'ms</div>';
-      item.innerHTML = html;
-      content.insertBefore(item, content.firstChild);
-    }
-    
-    recognition.onend = function() {
-      if (isListening) recognition.start();
+    r.onend = function() {
+      if (on) r.start();
     };
   </script>
 </body>
