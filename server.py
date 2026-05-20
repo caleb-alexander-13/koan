@@ -96,3 +96,8 @@ async def get_demo():
 async def get_live():
     with open("koan_live_call.html") as f:
         return Response(content=f.read(), media_type="text/html")
+
+@app.get("/live")
+async def get_live():
+    with open("koan_live_call.html") as f:
+        return Response(content=f.read(), media_type="text/html")
