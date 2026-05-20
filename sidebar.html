@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Koan</title>
+  <script src="https://appssdk.zoom.us/sdk.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; background: #f9fafb; }
+    h1 { color: #2563eb; font-size: 18px; margin: 0 0 8px 0; }
+    .tagline { color: #6b7280; font-size: 12px; margin-bottom: 16px; }
+    .status { padding: 12px; background: #e5e7eb; border-radius: 6px; margin: 12px 0; }
+    .answer { padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px 0; }
+    .answer p { margin: 8px 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Koan</h1>
+  <p class="tagline">Deep Answers. Real-Time Speed.</p>
+  <div class="status" id="status">Initializing Zoom SDK...</div>
+  <div id="answer"></div>
+
+  <script>
+    ZoomSdk.onReady(() => {
+      document.getElementById("status").textContent = "Initializing connection...";
+      ZoomSdk.getMeetingContext((context) => {
+        const meetingId = context.meetingID;
+        const wsUrl = "wss://" + window.location.host + "/ws/zoom/" + meetingId;
+        const ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+          document.getElementById("status").textContent = "Connected to Koan ✓";
+        };
+        
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.action === "answer") {
+            const p = data.payload;
+            document.getElementById("answer").innerHTML = `
+              <div class="answer">
+                <p><strong>Q:</strong> ${p.question}</p>
+                <p><strong>A:</strong> ${p.answer}</p>
+              </div>
+            `;
+          }
+        };
+        
+        ws.onerror = () => {
+          document.getElementById("status").textContent = "Connection error";
+        };
+      });
+    });
+  </script>
+</body>
+</html>
