@@ -32,9 +32,9 @@
   <div class="container">
     <div class="panel">
       <h2>Live Transcript</h2>
-      <div class="content" id="transcript">Waiting...</div>
-      <button class="button btn-primary" onclick="window.startListening()">START</button>
-      <button class="button btn-secondary" onclick="window.stopListening()">STOP</button>
+      <div class="content" id="transcript">Ready to start</div>
+      <button class="button btn-primary" id="startBtn" onclick="startListening()">START</button>
+      <button class="button btn-secondary" id="stopBtn" onclick="stopListening()" disabled>STOP</button>
     </div>
     <div class="panel">
       <h2>Agent Answers</h2>
@@ -48,15 +48,7 @@
   </div>
 
   <script>
-    console.log('Script loading...');
-    
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    console.log('SpeechRecognition available:', !!SR);
-    
-    if (!SR) {
-      alert('Speech Recognition not supported');
-    }
-    
     const r = new SR();
     r.continuous = true;
     r.interimResults = true;
@@ -64,30 +56,25 @@
     
     let on = false, qc = 0, ac = 0, ts = [];
     
-    window.startListening = function() {
-      console.log('START clicked');
+    function startListening() {
       on = true;
       qc = ac = 0;
       ts = [];
       document.getElementById('transcript').innerHTML = '';
       document.getElementById('answers').innerHTML = '';
-      console.log('Calling r.start()');
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
       r.start();
-      console.log('r.start() called');
-    };
+    }
     
-    window.stopListening = function() {
-      console.log('STOP clicked');
+    function stopListening() {
       on = false;
       r.stop();
-    };
-    
-    r.onstart = function() {
-      console.log('Speech recognition started');
-    };
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+    }
     
     r.onresult = function(e) {
-      console.log('onresult fired, resultIndex:', e.resultIndex, 'results length:', e.results.length);
       let final = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) {
@@ -96,9 +83,8 @@
       }
       
       if (final.trim()) {
-        console.log('Final transcript:', final.trim());
         const tr = document.getElementById('transcript');
-        if (tr.textContent === 'Waiting...') tr.innerHTML = '';
+        if (tr.textContent === 'Ready to start') tr.innerHTML = '';
         const d = document.createElement('div');
         d.className = 'item';
         d.textContent = final.trim();
@@ -107,17 +93,12 @@
         qc++;
         document.getElementById('q').textContent = qc;
         
-        console.log('Fetching answer for:', final.trim());
         const st = Date.now();
         fetch('https://koan-0tws.onrender.com/api/answer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: final.trim() })
-        }).then(res => {
-          console.log('API response status:', res.status);
-          return res.json();
-        }).then(data => {
-          console.log('API response:', data);
+        }).then(r => r.json()).then(data => {
           const time = Date.now() - st;
           if (data.answer) {
             const ar = document.getElementById('answers');
@@ -135,25 +116,13 @@
             const avg = Math.round(ts.reduce((a,b) => a+b) / ts.length);
             document.getElementById('s').textContent = avg + 'ms';
           }
-        }).catch(err => {
-          console.error('Fetch error:', err);
-        });
+        }).catch(err => console.error(err));
       }
     };
     
     r.onerror = function(e) {
-      console.error('Speech recognition error:', e.error);
+      console.error('Error:', e.error);
     };
-    
-    r.onend = function() {
-      console.log('Speech recognition ended');
-      if (on) {
-        console.log('Restarting...');
-        r.start();
-      }
-    };
-    
-    console.log('Script loaded completely');
   </script>
 </body>
 </html>
