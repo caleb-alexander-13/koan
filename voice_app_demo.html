@@ -19,7 +19,6 @@
     .transcript-item { margin-bottom: 12px; padding: 12px; border-radius: 8px; animation: slideIn 0.3s ease; }
     @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .transcript-item.customer { background: #eff6ff; border-left: 3px solid #3b82f6; }
-    .transcript-item.rep { background: #f0fdf4; border-left: 3px solid #10b981; }
     .transcript-speaker { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; letter-spacing: 0.5px; }
     .transcript-text { font-size: 14px; color: #1f2937; line-height: 1.6; }
     .answer-item { background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 2px solid #10b981; border-radius: 10px; padding: 14px; margin-bottom: 14px; animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -27,19 +26,16 @@
     .answer-text { font-size: 14px; color: #065f46; line-height: 1.7; margin-bottom: 10px; }
     .answer-meta { display: flex; justify-content: space-between; font-size: 11px; color: #0d8659; border-top: 1px solid rgba(16, 185, 129, 0.2); padding-top: 8px; }
     .empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; }
-    .empty-state-icon { font-size: 40px; margin-bottom: 12px; }
     .controls { background: #f9fafb; padding: 16px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; }
     .btn { flex: 1; padding: 12px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .btn-primary { background: #2563eb; color: white; }
     .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: #e5e7eb; color: #374151; }
-    .btn-secondary:hover { background: #d1d5db; }
     .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 16px; background: #f9fafb; border-top: 1px solid #e5e7eb; }
     .stat { text-align: center; }
     .stat-label { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; }
     .stat-value { font-size: 24px; font-weight: 700; color: #2563eb; margin-top: 4px; }
-    @media (max-width: 900px) { .container { grid-template-columns: 1fr; height: auto; } }
   </style>
 </head>
 <body>
@@ -102,14 +98,17 @@
     const qCount = document.getElementById('qCount');
     const aCount = document.getElementById('aCount');
     const avgSpeed = document.getElementById('avgSpeed');
+    
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    
     let isListening = false;
     let questionCount = 0;
     let answerCount = 0;
     let responseTimes = [];
-    let lastFinalText = '';
+    let lastProcessedFinal = '';
+    
     startBtn.addEventListener('click', () => {
       isListening = true;
       startBtn.disabled = true;
@@ -119,6 +118,7 @@
       transcriptStatus.textContent = 'Recording...';
       recognition.start();
     });
+    
     stopBtn.addEventListener('click', () => {
       isListening = false;
       recognition.stop();
@@ -126,39 +126,60 @@
       stopBtn.disabled = true;
       transcriptStatus.textContent = 'Recording stopped';
     });
+    
     recognition.onresult = (event) => {
-      let interim = '';
-      let finalText = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) { finalText += t + ' '; }
-        else { interim += t; }
+      if (transcriptContent.querySelector('.empty-state')) {
+        transcriptContent.innerHTML = '';
       }
-      const displayText = finalText || interim;
-      if (finalText && finalText !== lastFinalText) {
-        lastFinalText = finalText;
-        addTranscriptItem('Customer', finalText);
-        questionCount++;
-        qCount.textContent = questionCount;
-        processAnswerForQuestion(finalText);
-      } else if (interim) {
-        const tempDiv = transcriptContent.querySelector('.transcript-item.customer:last-child');
-        if (tempDiv && !tempDiv.dataset.final) {
-          tempDiv.querySelector('.transcript-text').textContent = interim + ' (typing...)';
+      
+      let interimText = '';
+      let finalText = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += transcript + ' ';
         } else {
-          addTranscriptItem('Customer', interim, false);
+          interimText += transcript;
         }
       }
+      
+      if (finalText.trim()) {
+        const cleanFinal = finalText.trim();
+        if (cleanFinal !== lastProcessedFinal) {
+          lastProcessedFinal = cleanFinal;
+          addTranscriptItem('Customer', cleanFinal);
+          
+          questionCount++;
+          qCount.textContent = questionCount;
+          
+          processAnswerForQuestion(cleanFinal);
+        }
+      }
+      
+      if (interimText.trim()) {
+        updateLastTranscript(interimText);
+      }
     };
-    function addTranscriptItem(speaker, text, isFinal = true) {
-      if (transcriptContent.querySelector('.empty-state')) { transcriptContent.innerHTML = ''; }
+    
+    function addTranscriptItem(speaker, text) {
       const item = document.createElement('div');
       item.className = `transcript-item ${speaker.toLowerCase()}`;
-      item.dataset.final = isFinal;
       item.innerHTML = `<div class="transcript-speaker">${speaker}</div><div class="transcript-text">${text}</div>`;
       transcriptContent.appendChild(item);
       transcriptContent.scrollTop = transcriptContent.scrollHeight;
     }
+    
+    function updateLastTranscript(interimText) {
+      let lastItem = transcriptContent.querySelector('.transcript-item:last-child');
+      if (!lastItem) return;
+      
+      const textDiv = lastItem.querySelector('.transcript-text');
+      if (textDiv && !lastItem.classList.contains('final')) {
+        textDiv.textContent = interimText + ' (listening...)';
+      }
+    }
+    
     async function processAnswerForQuestion(question) {
       const startTime = Date.now();
       try {
@@ -170,6 +191,7 @@
         const data = await response.json();
         const responseTime = Date.now() - startTime;
         responseTimes.push(responseTime);
+        
         if (data.answer) {
           answerCount++;
           aCount.textContent = answerCount;
@@ -179,14 +201,18 @@
         }
       } catch (err) { console.error('Error:', err); }
     }
+    
     function addAnswerItem(question, answer, confidence, responseTime) {
-      if (answerContent.querySelector('.empty-state')) { answerContent.innerHTML = ''; }
+      if (answerContent.querySelector('.empty-state')) { 
+        answerContent.innerHTML = ''; 
+      }
       const item = document.createElement('div');
       item.className = 'answer-item';
       item.innerHTML = `<div class="answer-q">Q: ${question.substring(0, 60)}${question.length > 60 ? '...' : ''}</div><div class="answer-text">${answer}</div><div class="answer-meta"><span>Confidence: ${confidence}%</span><span>${responseTime}ms</span></div>`;
       answerContent.insertBefore(item, answerContent.firstChild);
       answerContent.scrollTop = 0;
     }
+    
     recognition.onend = () => { if (isListening) { recognition.start(); } };
   </script>
 </body>
