@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import os
+import time
+import hmac
+import hashlib
 from retrieval_pipeline import KoanAssistant
 
 app = FastAPI()
@@ -16,7 +19,6 @@ app.add_middleware(
 )
 
 assistant = KoanAssistant()
-
 @app.get("/")
 async def root():
     return {"status": "Koan server is running", "version": "0.1.0"}
@@ -38,3 +40,82 @@ async def get_answer(request: dict):
     
     result = assistant.generate_answer(text)
     return result
+
+import hmac
+import hashlib
+import json
+
+ZOOM_WEBHOOK_SECRET = os.getenv("ZOOM_WEBHOOK_SECRET", "hnEpcWPYTmOR5wg9R-YtKw")
+
+def verify_zoom_webhook(request_body: str, auth_header: str) -> bool:
+    """Verify Zoom webhook signature"""
+    if not auth_header:
+        return False
+    message = f"v0:{int(time.time())}:{request_body}"
+    hash_obj = hmac.new(
+        ZOOM_WEBHOOK_SECRET.encode(),
+        message.encode(),
+        hashlib.sha256
+    )
+    expected_signature = f"v0={hash_obj.hexdigest()}"
+    return hmac.compare_digest(auth_header, expected_signature)
+
+@app.post("/zoom/webhook")
+async def zoom_webhook(request: Request):
+    """Handle Zoom webhook events"""
+    body = await request.body()
+    
+    # Handle Zoom challenge
+    try:
+        data = json.loads(body)
+        if data.get("event") == "app_deauthorized":
+            return {"status": "ok"}
+        
+        # Zoom challenge-response validation
+        if "challenge" in data:
+            return {
+                "challengeToken": data["challenge"]
+            }
+        
+        # Handle caption events
+        if data.get("event") == "meeting.transcript_caption_created":
+            caption = data.get("payload", {}).get("object", {}).get("caption", "")
+            meeting_id = data.get("payload", {}).get("object", {}).get("meeting_id", "")
+            
+            if caption:
+                print(f"Caption received: {caption}")
+                # Process caption through retrieval pipeline
+                # koan.generate_answer(caption)
+        
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return {"status": "error"}
+
+ZOOM_WEBHOOK_SECRET = os.getenv("ZOOM_WEBHOOK_SECRET", "hnEpcWPYTmOR5wg9R-YtKw")
+
+@app.post("/zoom/webhook")
+async def zoom_webhook(request: Request):
+    """Handle Zoom webhook events"""
+    body = await request.body()
+    
+    try:
+        data = json.loads(body)
+        
+        # Zoom challenge-response validation
+        if "challenge" in data:
+            return {
+                "challengeToken": data["challenge"]
+            }
+        
+        # Handle caption events
+        if data.get("event") == "meeting.transcript_caption_created":
+            caption = data.get("payload", {}).get("object", {}).get("caption", "")
+            if caption:
+                print(f"Caption received: {caption}")
+                # Will process through retrieval pipeline next
+        
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return {"status": "error"}
