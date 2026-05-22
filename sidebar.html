@@ -38,7 +38,7 @@
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          document.getElementById("status").textContent = "Koan is listening ✓";
+          document.getElementById("status").textContent = "Koan is listening ✓ — waiting for transcript...";
         };
 
         ws.onmessage = (event) => {
@@ -64,6 +64,7 @@
 
         // Live transcript from Zoom
         zoomSdk.addEventListener("onLiveTranscript", (event) => {
+          document.getElementById("status").textContent = "GOT TRANSCRIPT: " + JSON.stringify(event).slice(0,100);
           const text = event.transcriptData?.transcript || "";
           if (text && ws && ws.readyState === WebSocket.OPEN) {
             document.getElementById("status").textContent = "Heard: " + text;
