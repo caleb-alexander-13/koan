@@ -192,3 +192,16 @@ async def oauth_callback(code: str = None, state: str = None):
 @app.get("/zoom/oauth")
 async def zoom_oauth(code: str = None, state: str = None):
     return {"status": "ok", "message": "Koan authorized"}
+
+from fastapi import WebSocket
+import asyncio
+
+@app.websocket("/ws/zoom/{session_id}")
+async def zoom_websocket(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await websocket.send_text(data)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
