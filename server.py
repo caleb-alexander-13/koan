@@ -205,3 +205,50 @@ async def zoom_websocket(websocket: WebSocket, session_id: str):
             await websocket.send_text(data)
     except Exception as e:
         print(f"WebSocket error: {e}")
+
+@app.websocket("/ws/koan/{session_id}")
+async def koan_websocket(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            data = json.loads(raw)
+            text = data.get("text", "")
+            if text:
+                is_question, question = assistant.detect_question_from_text(text)
+                if is_question and question:
+                    answer = assistant.generate_answer(question)
+                    await websocket.send_text(json.dumps({
+                        "action": "answer",
+                        "payload": {
+                            "question": question,
+                            "answer": answer
+                        }
+                    }))
+    except Exception as e:
+        print(f"Koan WebSocket error: {e}")
+
+@app.websocket("/ws/koan/{session_id}")
+async def koan_websocket(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    buffer = []
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            data = json.loads(raw)
+            text = data.get("text", "")
+            if text:
+                buffer.append(text)
+                combined = " ".join(buffer[-5:])
+                if "?" in combined or any(w in combined.lower() for w in ["what", "when", "how", "where", "who", "does", "can", "is", "are"]):
+                    answer = assistant.generate_answer(combined)
+                    buffer = []
+                    await websocket.send_text(json.dumps({
+                        "action": "answer",
+                        "payload": {
+                            "question": combined,
+                            "answer": answer
+                        }
+                    }))
+    except Exception as e:
+        print(f"Koan WebSocket error: {e}")
