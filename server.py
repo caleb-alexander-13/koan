@@ -1,4 +1,4 @@
-import requests
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -132,7 +132,7 @@ def get_zoom_access_token():
         import base64
         auth_b64 = base64.b64encode(auth_str.encode()).decode()
         
-        response = requests.post(
+        response = httpx.post(
             ZOOM_API_BASE,
             headers={"Authorization": f"Basic {auth_b64}"},
             data={"grant_type": "account_credentials", "account_id": os.getenv("ZOOM_ACCOUNT_ID")}
@@ -152,7 +152,7 @@ async def get_meeting_captions(meeting_id: str):
     
     try:
         # Get meeting live transcript
-        response = requests.get(
+        response = httpx.get(
             f"{ZOOM_API_URL}/meetings/{meeting_id}/live_meeting_details",
             headers={"Authorization": f"Bearer {token}"}
         )
