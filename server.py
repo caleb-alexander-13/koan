@@ -1,3 +1,4 @@
+import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -120,9 +121,6 @@ async def zoom_webhook(request: Request):
         print(f"Webhook error: {e}")
         return {"status": "error"}
 
-import requests
-import time as time_module
-from datetime import datetime, timedelta
 
 ZOOM_API_BASE = "https://zoom.us/oauth/token"
 ZOOM_API_URL = "https://api.zoom.us/v2"
