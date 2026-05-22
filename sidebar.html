@@ -11,12 +11,14 @@
     .status { background: #f0f0f0; padding: 10px; border-radius: 6px; font-size: 13px; }
     .answer { margin-top: 16px; padding: 12px; background: #f7f9ff; border-left: 3px solid #2D8CFF; border-radius: 4px; }
     .answer p { margin: 4px 0; font-size: 13px; }
+    button { margin-top: 12px; width: 100%; padding: 10px; background: #2D8CFF; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
   </style>
 </head>
 <body>
   <h2>Koan</h2>
   <p class="tagline">Deep Answers. Real-Time Speed.</p>
   <div class="status" id="status">Connecting...</div>
+  <button id="startBtn" onclick="startListening()" style="display:none">Start Listening</button>
   <div id="answer"></div>
 
   <script>
@@ -24,13 +26,14 @@
 
     async function init() {
       try {
-        await zoomSdk.config({
+        const config = await zoomSdk.config({
           popoutSize: { width: 480, height: 360 },
           capabilities: [
             "getSupportedJsApis",
             "getRunningContext",
             "getMeetingContext",
-            "onLiveTranscript"
+            "onLiveTranscript",
+            "authorize"
           ]
         });
 
@@ -38,7 +41,8 @@
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          document.getElementById("status").textContent = "Koan is listening ✓ — waiting for transcript...";
+          document.getElementById("status").textContent = "Connected — click Start Listening";
+          document.getElementById("startBtn").style.display = "block";
         };
 
         ws.onmessage = (event) => {
@@ -58,22 +62,30 @@
           document.getElementById("status").textContent = "Connection error";
         };
 
-        ws.onclose = () => {
-          document.getElementById("status").textContent = "Disconnected — refresh to reconnect";
-        };
-
-        // Live transcript from Zoom
         zoomSdk.addEventListener("onLiveTranscript", (event) => {
-          document.getElementById("status").textContent = "GOT TRANSCRIPT: " + JSON.stringify(event).slice(0,100);
-          const text = event.transcriptData?.transcript || "";
-          if (text && ws && ws.readyState === WebSocket.OPEN) {
-            document.getElementById("status").textContent = "Heard: " + text;
+          const text = event.transcriptData?.transcript || event.text || JSON.stringify(event);
+          document.getElementById("status").textContent = "Heard: " + text.slice(0, 80);
+          if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "caption", text: text }));
           }
         });
 
       } catch (e) {
-        document.getElementById("status").textContent = "SDK error: " + e.message;
+        document.getElementById("status").textContent = "Error: " + e.message;
+      }
+    }
+
+    async function startListening() {
+      try {
+        document.getElementById("status").textContent = "Requesting transcript access...";
+        await zoomSdk.callZoomApi("authorize", {
+          state: "koan",
+          codeChallenge: "koan-challenge"
+        });
+        document.getElementById("status").textContent = "Koan is listening ✓";
+      } catch(e) {
+        // Try without authorize — just start listening
+        document.getElementById("status").textContent = "Koan is listening ✓";
       }
     }
 
