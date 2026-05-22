@@ -119,3 +119,51 @@ async def zoom_webhook(request: Request):
     except Exception as e:
         print(f"Webhook error: {e}")
         return {"status": "error"}
+
+import requests
+import time as time_module
+from datetime import datetime, timedelta
+
+ZOOM_API_BASE = "https://zoom.us/oauth/token"
+ZOOM_API_URL = "https://api.zoom.us/v2"
+
+def get_zoom_access_token():
+    """Get Zoom Server-to-Server OAuth token"""
+    try:
+        auth_str = f"{os.getenv('ZOOM_CLIENT_ID')}:{os.getenv('ZOOM_CLIENT_SECRET')}"
+        import base64
+        auth_b64 = base64.b64encode(auth_str.encode()).decode()
+        
+        response = requests.post(
+            ZOOM_API_BASE,
+            headers={"Authorization": f"Basic {auth_b64}"},
+            data={"grant_type": "account_credentials", "account_id": os.getenv("ZOOM_ACCOUNT_ID")}
+        )
+        data = response.json()
+        return data.get("access_token")
+    except Exception as e:
+        print(f"Failed to get Zoom token: {e}")
+        return None
+
+@app.get("/zoom/captions/{meeting_id}")
+async def get_meeting_captions(meeting_id: str):
+    """Get captions from an active Zoom meeting"""
+    token = get_zoom_access_token()
+    if not token:
+        return {"error": "Failed to authenticate with Zoom"}
+    
+    try:
+        # Get meeting live transcript
+        response = requests.get(
+            f"{ZOOM_API_URL}/meetings/{meeting_id}/live_meeting_details",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if response.status_code == 200:
+            meeting_data = response.json()
+            return {"meeting_id": meeting_id, "data": meeting_data}
+        else:
+            return {"error": "Meeting not found or not live"}
+    except Exception as e:
+        print(f"Caption fetch error: {e}")
+        return {"error": str(e)}
