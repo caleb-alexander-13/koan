@@ -188,3 +188,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 @app.get("/oauth/callback")
 async def oauth_callback(code: str = None, state: str = None):
     return {"status": "ok", "message": "Koan authorized"}
+
+@app.get("/zoom/oauth")
+async def zoom_oauth(code: str = None, state: str = None):
+    return {"status": "ok", "message": "Koan authorized"}
