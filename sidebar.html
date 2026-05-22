@@ -20,21 +20,26 @@
   <div id="answer"></div>
 
   <script>
+    let ws;
+
     async function init() {
       try {
-        const configResponse = await zoomSdk.config({
+        await zoomSdk.config({
           popoutSize: { width: 480, height: 360 },
           capabilities: [
             "getSupportedJsApis",
             "getRunningContext",
-            "getMeetingContext"
+            "getMeetingContext",
+            "onMyActiveSpeakerChange",
+            "getMeetingUUID",
+            "onReaction"
           ]
         });
 
         document.getElementById("status").textContent = "Connecting to Koan...";
 
         const wsUrl = "wss://" + window.location.host + "/ws/zoom/session";
-        const ws = new WebSocket(wsUrl);
+        ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
           document.getElementById("status").textContent = "Koan is listening ✓";
@@ -61,12 +66,39 @@
           document.getElementById("status").textContent = "Disconnected — refresh to reconnect";
         };
 
+        // Listen for caption events via Zoom SDK
+        zoomSdk.addEventListener("onMyActiveSpeakerChange", (event) => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: "caption",
+              text: event.displayName + " is speaking"
+            }));
+          }
+        });
+
       } catch (e) {
         document.getElementById("status").textContent = "SDK error: " + e.message;
       }
     }
 
+    // Manual caption input for testing
+    window.sendCaption = function(text) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "caption", text: text }));
+      }
+    };
+
     init();
   </script>
+
+  <!-- Test input -->
+  <div style="margin-top: 24px; border-top: 1px solid #eee; padding-top: 12px;">
+    <input id="testInput" type="text" placeholder="Type a question to test..." 
+      style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #ddd; border-radius:4px; font-size:13px;">
+    <button onclick="sendCaption(document.getElementById('testInput').value)" 
+      style="margin-top:8px; width:100%; padding:8px; background:#2D8CFF; color:white; border:none; border-radius:4px; cursor:pointer; font-size:13px;">
+      Send to Koan
+    </button>
+  </div>
 </body>
 </html>
