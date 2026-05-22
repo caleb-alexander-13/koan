@@ -1,35 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Koan</title>
   <script src="https://appssdk.zoom.us/sdk.min.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; background: #f9fafb; }
-    h1 { color: #2563eb; font-size: 18px; margin: 0 0 8px 0; }
-    .tagline { color: #6b7280; font-size: 12px; margin-bottom: 16px; }
-    .status { padding: 12px; background: #e5e7eb; border-radius: 6px; margin: 12px 0; }
-    .answer { padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px 0; }
-    .answer p { margin: 8px 0; font-size: 14px; }
+    body { font-family: sans-serif; padding: 16px; background: #fff; }
+    h2 { color: #2D8CFF; font-size: 18px; margin: 0; }
+    p.tagline { color: #888; font-size: 12px; margin: 4px 0 16px; }
+    .status { background: #f0f0f0; padding: 10px; border-radius: 6px; font-size: 13px; }
+    .answer { margin-top: 16px; padding: 12px; background: #f7f9ff; border-left: 3px solid #2D8CFF; border-radius: 4px; }
+    .answer p { margin: 4px 0; font-size: 13px; }
   </style>
 </head>
 <body>
-  <h1>Koan</h1>
+  <h2>Koan</h2>
   <p class="tagline">Deep Answers. Real-Time Speed.</p>
   <div class="status" id="status">Initializing Zoom SDK...</div>
   <div id="answer"></div>
 
   <script>
-    ZoomSdk.onReady(() => {
-      document.getElementById("status").textContent = "Initializing connection...";
-      ZoomSdk.getMeetingContext((context) => {
-        const meetingId = context.meetingID;
+    async function init() {
+      try {
+        await zoomSdk.config({
+          capabilities: ["getMeetingContext", "onMeetingTokenRefresh"],
+          version: "0.16"
+        });
+
+        const context = await zoomSdk.getMeetingContext();
+        const meetingId = context.meetingID || "default";
+        document.getElementById("status").textContent = "Connecting to Koan...";
+
         const wsUrl = "wss://" + window.location.host + "/ws/zoom/" + meetingId;
         const ws = new WebSocket(wsUrl);
-        
+
         ws.onopen = () => {
-          document.getElementById("status").textContent = "Connected to Koan ✓";
+          document.getElementById("status").textContent = "Koan is listening ✓";
         };
-        
+
         ws.onmessage = (event) => {
           const data = JSON.parse(event.data);
           if (data.action === "answer") {
@@ -42,12 +50,17 @@
             `;
           }
         };
-        
+
         ws.onerror = () => {
-          document.getElementById("status").textContent = "Connection error";
+          document.getElementById("status").textContent = "Connection error — retrying...";
         };
-      });
-    });
+
+      } catch (e) {
+        document.getElementById("status").textContent = "SDK error: " + e.message;
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
