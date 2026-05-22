@@ -167,3 +167,8 @@ async def get_meeting_captions(meeting_id: str):
     except Exception as e:
         print(f"Caption fetch error: {e}")
         return {"error": str(e)}
+
+@app.get("/zoom_sidebar.html")
+async def get_sidebar():
+    with open("sidebar.html") as f:
+        return Response(content=f.read(), media_type="text/html")
