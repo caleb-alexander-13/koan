@@ -184,3 +184,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+@app.get("/oauth/callback")
+async def oauth_callback(code: str = None, state: str = None):
+    return {"status": "ok", "message": "Koan authorized"}
