@@ -16,22 +16,20 @@
 <body>
   <h2>Koan</h2>
   <p class="tagline">Deep Answers. Real-Time Speed.</p>
-  <div class="status" id="status">Initializing Zoom SDK...</div>
+  <div class="status" id="status">Connecting to Koan...</div>
   <div id="answer"></div>
 
   <script>
     async function init() {
       try {
         await zoomSdk.config({
-          capabilities: ["getMeetingContext", "onMeetingTokenRefresh"],
+          capabilities: [],
           version: "0.16"
         });
 
-        const context = await zoomSdk.getMeetingContext();
-        const meetingId = context.meetingID || "default";
-        document.getElementById("status").textContent = "Connecting to Koan...";
+        document.getElementById("status").textContent = "Connecting...";
 
-        const wsUrl = "wss://" + window.location.host + "/ws/zoom/" + meetingId;
+        const wsUrl = "wss://" + window.location.host + "/ws/zoom/session";
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
@@ -53,6 +51,10 @@
 
         ws.onerror = () => {
           document.getElementById("status").textContent = "Connection error — retrying...";
+        };
+
+        ws.onclose = () => {
+          document.getElementById("status").textContent = "Disconnected — refresh to reconnect";
         };
 
       } catch (e) {
