@@ -42,7 +42,7 @@ class KoanAssistant:
 Question: "{question}"
 
 Reply in this exact format:
-[2-5 word direct answer]
+2-5 word direct answer (no brackets)
 ...
 [One supporting sentence under 20 words]"""
         else:
