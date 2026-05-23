@@ -101,10 +101,11 @@ h2 { font-size: clamp(1.75rem, 3.5vw, 2.6rem); font-weight: 600; letter-spacing:
 
 /* USE CASES */
 .use { max-width: 900px; margin: 0 auto; padding: 0 2rem 6rem; }
-.use-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 2.5rem; }
+.use-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 2.5rem; }
 .use-item { background: white; padding: 1.5rem; transition: background 0.15s; }
 .use-item:hover { background: var(--bg-2); }
-.use-icon { font-size: 1.1rem; margin-bottom: 0.75rem; }
+.use-icon { display: none; }
+.use-icon-svg { color: var(--accent); margin-bottom: 1rem; display: flex; }
 .use-title { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.3rem; letter-spacing: -0.01em; }
 .use-desc { font-size: 0.78rem; color: var(--text-2); line-height: 1.55; font-weight: 300; }
 
@@ -252,32 +253,32 @@ footer { padding: 1.5rem 2.5rem; border-top: 1px solid var(--border); display: f
   <h2>For any team that<br>sells on calls.</h2>
   <div class="use-grid">
     <div class="use-item">
-      <div class="use-icon">🏛️</div>
+      <div class="use-icon-svg"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="7" width="16" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M6 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="use-title">Event venues</div>
       <div class="use-desc">Pricing, capacity, and policies answered instantly on every prospect call.</div>
     </div>
     <div class="use-item">
-      <div class="use-icon">🏠</div>
+      <div class="use-icon-svg"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 7.5V16h5v-4h4v4h5V7.5L9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
       <div class="use-title">Real estate</div>
       <div class="use-desc">Property specs and HOA details surfaced without breaking eye contact.</div>
     </div>
     <div class="use-item">
-      <div class="use-icon">💼</div>
+      <div class="use-icon-svg"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="4" width="16" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 9h8M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="use-title">SaaS sales</div>
       <div class="use-desc">Feature questions and pricing tiers — no more putting callers on hold.</div>
     </div>
     <div class="use-item">
-      <div class="use-icon">⚕️</div>
+      <div class="use-icon-svg"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 6v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="use-title">Healthcare</div>
       <div class="use-desc">Coverage details and intake questions handled with confidence.</div>
     </div>
     <div class="use-item">
-      <div class="use-icon">🎓</div>
+      <div class="use-icon-svg"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l1.8 5.4H17l-4.9 3.6 1.9 5.6L9 13.4l-5 3.2 1.9-5.6L1 7.4h6.2L9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
       <div class="use-title">Education</div>
       <div class="use-desc">Admissions, tuition, and program details accurate on every enrollment call.</div>
     </div>
     <div class="use-item">
-      <div class="use-icon">⚙️</div>
+      <div class="use-icon-svg"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.2 3.2l1.4 1.4M13.4 13.4l1.4 1.4M3.2 14.8l1.4-1.4M13.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="use-title">Any industry</div>
       <div class="use-desc">If your team takes calls and has a knowledge base, Koan works for you.</div>
     </div>
