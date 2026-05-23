@@ -1,13 +1,29 @@
 {
-  "venue": "Cavalli",
+  "venue": "Cavalli Hudson Valley",
+  "address": "2551 NY-385, Coxsackie, NY 12051",
   "facts": [
-    {"topic": "capacity", "text": "Cavalli can accommodate up to 150 guests for both indoor and outdoor setups"},
-    {"topic": "pricing", "text": "Pricing starts at $15,000-$18,000 all-inclusive with tables, chairs, dinnerware, dance floor, and WiFi included"},
-    {"topic": "catering", "text": "Cavalli works with preferred vendor list for catering. The venue provides prep and heating space only"},
-    {"topic": "alcohol", "text": "Alcohol is allowed with a day-of permit. BYOB is not permitted"},
-    {"topic": "noise", "text": "Amplified music must stop by 10pm. Hard venue close is 11pm"},
-    {"topic": "fireworks", "text": "Fireworks are not permitted. Alternatives include LED displays and sparklers"},
-    {"topic": "weather", "text": "Indoor ceremony backup is available in case of bad weather"},
-    {"topic": "cancellation", "text": "Cancellation policy: 20% fee applies"}
+    {"topic": "capacity", "text": "Cavalli can accommodate up to 150 guests on Level 2 of the barn for reception. The external balcony holds approximately 50 guests."},
+    {"topic": "pricing", "text": "Pricing starts at $15,000-$18,000 all-inclusive with tables, chairs, dinnerware, dance floor, and WiFi included."},
+    {"topic": "catering", "text": "Outside caterers are welcome — no requirement to use preferred vendors. Back-of-house includes two refrigerators, two freezers, industrial sink, dishwasher, three induction burners, and 220V outlets. No commercial range or oven."},
+    {"topic": "alcohol", "text": "All alcohol must be served by a licensed caterer or bar service. BYOB is not permitted. Cavalli's custom bar includes a kegerator, refrigerator, and bar stools."},
+    {"topic": "noise", "text": "All events end at 10:00 pm. DJ or band will be given a heads-up at 9:45 pm. After-party options available at Ravish and Cask & Rasher in Coxsackie."},
+    {"topic": "fireworks", "text": "Fireworks are not permitted. Alternatives include LED displays and sparklers."},
+    {"topic": "weather", "text": "Indoor ceremony backup is available. Level 2 is preferred for indoor ceremonies. Rain contingency plan is confirmed at the 60-day call."},
+    {"topic": "cancellation", "text": "Cancellation policy includes a 20% fee on total event cost."},
+    {"topic": "venue_access", "text": "Venue opens at 8:00 am on wedding day for vendor load-in. Day-before setup available 1:00 pm to 6:00 pm. Deliveries can be scheduled up to two days before."},
+    {"topic": "breakdown", "text": "Pickup window is 8:00 am to 12:00 pm the morning after the event. All decor, rentals, and personal items must be removed by noon."},
+    {"topic": "parking", "text": "Dedicated parking lot holds 50 vehicles. Staff coordinates overflow for larger events. Vendor vehicles park separately."},
+    {"topic": "rehearsal", "text": "Rehearsal on the Great Lawn is self-managed for farmhouse guests. Barn access rehearsal window is 5:00 pm to 7:00 pm the evening before, included at no charge. Rehearsal dinner is a 3-hour add-on at $2,500."},
+    {"topic": "day_of_coordinator", "text": "A day-of coordinator and sound engineer are not included in the base package. They are available as Enhanced Onsite Support, an add-on package. Cavalli staff manage the space throughout the event."},
+    {"topic": "av_system", "text": "Indoor and outdoor audio systems, two wireless microphones, and two portable speakers are included. Sound engineering requires either Enhanced Onsite Support or a separately hired engineer."},
+    {"topic": "farmhouse", "text": "All wedding packages include a 2-night farmhouse stay for up to 10 guests. Four bedrooms, full kitchen, WiFi, EV charging, outdoor grill, and firepit. Check-in 2:00 pm, check-out 11:00 am day after event. Additional nights at $750/night."},
+    {"topic": "layout", "text": "Level 1 has bar, three bathrooms, and catering back-of-house for cocktail hour and dancing. Level 2 seats up to 150 for reception. Great Lawn is primary outdoor ceremony area."},
+    {"topic": "tables", "text": "Available tables include ten 72-inch rounds, ten 60-inch rounds, eight 8x3.5 foot rectangulars, and 15 pub tables for cocktail hour."},
+    {"topic": "air_conditioning", "text": "The barn is not climate controlled. For April and July-August events, timing and airflow are factored into planning at the 60-day call."},
+    {"topic": "vendors", "text": "Outside vendors are welcome. Caterers, rental companies, and bar service providers must provide a certificate of insurance. All vendors receive a Cavalli Vendor Brief two weeks before the event."},
+    {"topic": "planning_timeline", "text": "60-day call covers full layout, vendor list, and rain plan. 30-day call confirms runsheet and vendor load-in times. Vendor briefs sent 2 weeks out."},
+    {"topic": "location", "text": "Cavalli is set on 90 acres between the Hudson River and the Catskill Mountains in Coxsackie, NY. Phone: (518) 212-7758. Email: info@cavallihudsonvalley.com."},
+    {"topic": "ceremony_flip", "text": "If both ceremony and reception are on Level 2, Cavalli handles the room flip. Plan 30 minutes of cocktail hour to cover the transition."},
+    {"topic": "contact", "text": "Contact Cavalli at info@cavallihudsonvalley.com or (518) 212-7758. Website: cavallihudsonvalley.com."}
   ]
 }
