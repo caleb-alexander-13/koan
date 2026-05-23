@@ -22,7 +22,8 @@ app.add_middleware(
 assistant = KoanAssistant()
 @app.get("/")
 async def root():
-    return {"status": "Koan server is running", "version": "0.1.0"}
+    with open("landing.html") as f:
+        return Response(content=f.read(), media_type="text/html")
 
 @app.get("/health")
 async def health():

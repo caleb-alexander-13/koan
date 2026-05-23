@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Koan — Know more. Close more.</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent: #059669;
+  --accent-light: #ecfdf5;
+  --accent-mid: #a7f3d0;
+  --bg: #ffffff;
+  --bg-2: #f8f8f6;
+  --bg-3: #f0f0ec;
+  --border: rgba(0,0,0,0.07);
+  --border-2: rgba(0,0,0,0.12);
+  --text: #111110;
+  --text-2: #555552;
+  --text-3: #999996;
+  --green: #16a34a;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: 'Geist', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+
+
+/* NAV */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 2.5rem; height: 56px; background: rgba(255,255,255,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+.nav-logo { font-size: 1rem; font-weight: 600; color: var(--text); text-decoration: none; letter-spacing: -0.02em; }
+.nav-links { display: flex; align-items: center; gap: 2rem; }
+.nav-link { font-size: 0.85rem; color: var(--text-2); text-decoration: none; transition: color 0.15s; }
+.nav-link:hover { color: var(--text); }
+.nav-cta { background: var(--accent); color: white; border: none; padding: 0.45rem 1.1rem; border-radius: 6px; font-family: 'Geist', sans-serif; font-size: 0.83rem; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+.nav-cta:hover { opacity: 0.85; }
+
+/* HERO */
+.hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8rem 2rem 4rem; max-width: 820px; margin: 0 auto; }
+.hero-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--accent-light); border: 1px solid var(--accent-mid); border-radius: 100px; padding: 0.35rem 0.9rem; font-size: 0.75rem; color: var(--accent); margin-bottom: 2.25rem; font-weight: 500; }
+.hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+h1 { font-size: clamp(2.6rem, 5.5vw, 4.2rem); font-weight: 600; line-height: 1.06; letter-spacing: -0.035em; color: var(--text); margin-bottom: 1.25rem; }
+h1 .muted { color: var(--text-3); font-weight: 400; }
+.hero-sub { font-size: 1.05rem; color: var(--text-2); max-width: 46ch; line-height: 1.7; margin-bottom: 2.5rem; font-weight: 300; }
+.hero-ctas { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; justify-content: center; margin-bottom: 4rem; }
+.btn-primary { background: var(--accent); color: white; border: none; padding: 0.72rem 1.6rem; border-radius: 8px; font-family: 'Geist', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: opacity 0.15s; text-decoration: none; letter-spacing: -0.01em; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border-2); padding: 0.72rem 1.6rem; border-radius: 8px; font-family: 'Geist', sans-serif; font-size: 0.9rem; font-weight: 400; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.btn-ghost:hover { color: var(--text); border-color: rgba(0,0,0,0.22); }
+
+/* PRODUCT PREVIEW */
+.preview-wrap { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 2rem 6rem; }
+.preview { background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.preview-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border); background: white; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+.preview-title-bar { font-size: 0.75rem; color: var(--text-3); margin: 0 auto; font-family: 'Geist Mono', monospace; }
+.preview-body { display: grid; grid-template-columns: 1fr 1fr; }
+.preview-left { padding: 1.5rem; border-right: 1px solid var(--border); }
+.preview-right { padding: 1.5rem; background: white; }
+.preview-section-label { font-size: 0.67rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-bottom: 1rem; }
+.transcript-line { font-size: 0.82rem; color: var(--text-2); padding: 0.6rem 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+.transcript-line:last-child { border-bottom: none; }
+.transcript-line .speaker { font-size: 0.67rem; color: var(--text-3); display: block; margin-bottom: 0.2rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.transcript-line .hl { color: var(--accent); font-weight: 500; }
+.answer-block { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem 1rem 1.35rem; margin-bottom: 0.75rem; position: relative; }
+.answer-block::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 65%; width: 2.5px; background: var(--accent); border-radius: 0 2px 2px 0; }
+.answer-label { font-size: 0.67rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.35rem; }
+.answer-value { font-size: 0.88rem; color: var(--text); line-height: 1.5; }
+.answer-value strong { color: var(--accent); font-weight: 600; }
+.answer-processing { display: flex; align-items: center; gap: 0.6rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1.1rem; }
+.processing-dots { display: flex; gap: 3px; }
+.processing-dots span { width: 5px; height: 5px; background: var(--text-3); border-radius: 50%; animation: blink 1.4s ease-in-out infinite; }
+.processing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.processing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100%{opacity:0.3;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+.processing-text { font-size: 0.78rem; color: var(--text-3); }
+
+/* LOGOS */
+.logos { text-align: center; padding: 2.5rem 2rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg-2); }
+.logos-label { font-size: 0.72rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.5rem; }
+.logos-row { display: flex; justify-content: center; align-items: center; gap: 3rem; flex-wrap: wrap; }
+.logo-item { font-size: 0.88rem; font-weight: 500; color: var(--text-3); }
+
+/* HOW */
+.how { max-width: 900px; margin: 0 auto; padding: 6rem 2rem; }
+.section-label { font-size: 0.7rem; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; margin-bottom: 1rem; }
+h2 { font-size: clamp(1.75rem, 3.5vw, 2.6rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.12; margin-bottom: 0.75rem; }
+.section-sub { font-size: 1rem; color: var(--text-2); font-weight: 300; max-width: 46ch; line-height: 1.65; margin-bottom: 3rem; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.step { background: white; padding: 2rem; }
+.step:hover { background: var(--bg-2); }
+.step-num { font-family: 'Geist Mono', monospace; font-size: 0.7rem; color: var(--accent); margin-bottom: 1.25rem; font-weight: 400; }
+.step-title { font-size: 0.93rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.015em; }
+.step-desc { font-size: 0.81rem; color: var(--text-2); line-height: 1.6; font-weight: 300; }
+
+/* USE CASES */
+.use { max-width: 900px; margin: 0 auto; padding: 0 2rem 6rem; }
+.use-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 2.5rem; }
+.use-item { background: white; padding: 1.5rem; transition: background 0.15s; }
+.use-item:hover { background: var(--bg-2); }
+.use-icon { font-size: 1.1rem; margin-bottom: 0.75rem; }
+.use-title { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.3rem; letter-spacing: -0.01em; }
+.use-desc { font-size: 0.78rem; color: var(--text-2); line-height: 1.55; font-weight: 300; }
+
+/* WAITLIST */
+.waitlist { background: var(--accent); padding: 7rem 2rem; text-align: center; }
+.waitlist-inner { max-width: 520px; margin: 0 auto; }
+.waitlist .section-label { color: rgba(255,255,255,0.6); }
+.waitlist h2 { color: white; margin-bottom: 1rem; }
+.waitlist-sub { font-size: 0.95rem; color: rgba(255,255,255,0.75); margin-bottom: 2.5rem; font-weight: 300; line-height: 1.65; }
+.waitlist-form { display: flex; gap: 0.6rem; max-width: 400px; margin: 0 auto; }
+.waitlist-input { flex: 1; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: white; padding: 0.72rem 1rem; border-radius: 8px; font-family: 'Geist', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.15s; }
+.waitlist-input::placeholder { color: rgba(255,255,255,0.45); }
+.waitlist-input:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.2); }
+.btn-white { background: white; color: var(--accent); border: none; padding: 0.72rem 1.4rem; border-radius: 8px; font-family: 'Geist', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
+.btn-white:hover { opacity: 0.9; }
+.success-msg { display: none; font-size: 0.85rem; color: rgba(255,255,255,0.9); margin-top: 1.25rem; }
+
+footer { padding: 1.5rem 2.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-3); background: white; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.fu { opacity: 0; animation: fadeUp 0.55s ease forwards; }
+.fu-1{animation-delay:0s} .fu-2{animation-delay:0.07s} .fu-3{animation-delay:0.14s} .fu-4{animation-delay:0.22s} .fu-5{animation-delay:0.33s}
+</style>
+</head>
+<body>
+
+
+  <div class="swatch swatch-mint" title="Mint" onclick="setColor('#059669','#ecfdf5','#a7f3d0')"></div>
+  <div class="swatch swatch-coral" title="Coral" onclick="setColor('#ea580c','#fff7ed','#fed7aa')"></div>
+  <div class="swatch swatch-purple" title="Purple" onclick="setColor('#7c3aed','#f5f3ff','#ddd6fe')"></div>
+  <div class="swatch swatch-rose" title="Rose" onclick="setColor('#e11d48','#fff1f2','#fecdd3')"></div>
+  <div class="swatch swatch-slate" title="Slate" onclick="setColor('#475569','#f8fafc','#cbd5e1')"></div>
+</div>
+
+<nav>
+  <a class="nav-logo" href="#">Koan</a>
+  <div class="nav-links">
+    <a class="nav-link" href="#how">How it works</a>
+    <a class="nav-link" href="#use">Use cases</a>
+    <button class="nav-cta" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">Join waitlist</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge fu fu-1">
+    <span class="hero-badge-dot"></span>
+    Now in private beta
+  </div>
+  <h1 class="fu fu-2">Your knowledge base,<br><span class="muted">live in every call.</span></h1>
+  <p class="hero-sub fu fu-3">Koan listens to your Zoom calls and instantly surfaces answers from your knowledge base — so your team always sounds like the expert in the room.</p>
+  <div class="hero-ctas fu fu-4">
+    <a class="btn-primary" href="#waitlist">Join the waitlist</a>
+    <a class="btn-ghost" href="#how">See how it works</a>
+  </div>
+</div>
+
+<div class="preview-wrap fu fu-5">
+  <div class="preview">
+    <div class="preview-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="preview-title-bar">Koan — Zoom sidebar</span>
+    </div>
+    <div class="preview-body">
+      <div class="preview-left">
+        <div class="preview-section-label">Live transcript</div>
+        <div class="transcript-line">
+          <span class="speaker">Prospect</span>
+          What's your <span class="hl">cancellation policy</span> if we need to change the date?
+        </div>
+        <div class="transcript-line">
+          <span class="speaker">Prospect</span>
+          Is there <span class="hl">air conditioning</span> in the main space?
+        </div>
+        <div class="transcript-line">
+          <span class="speaker">You</span>
+          Great questions — let me walk you through both...
+        </div>
+        <div class="transcript-line">
+          <span class="speaker">Prospect</span>
+          And <span class="hl">parking</span> — we're expecting around 120 guests.
+        </div>
+      </div>
+      <div class="preview-right">
+        <div class="preview-section-label">Koan answers</div>
+        <div class="answer-block">
+          <div class="answer-label">Cancellation policy</div>
+          <div class="answer-value"><strong>20% fee</strong> on total event cost. Contact us to discuss date changes.</div>
+        </div>
+        <div class="answer-block">
+          <div class="answer-label">Air conditioning</div>
+          <div class="answer-value">Barn is <strong>not climate controlled.</strong> Airflow planning at your 60-day call.</div>
+        </div>
+        <div class="answer-processing">
+          <div class="processing-dots"><span></span><span></span><span></span></div>
+          <span class="processing-text">Finding parking details...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="logos">
+  <div class="logos-label">Works alongside tools your team already uses</div>
+  <div class="logos-row">
+    <span class="logo-item">Zoom</span>
+    <span class="logo-item">Notion</span>
+    <span class="logo-item">Google Docs</span>
+    <span class="logo-item">HubSpot</span>
+    <span class="logo-item">Salesforce</span>
+  </div>
+</div>
+
+<div class="how" id="how">
+  <div class="section-label">How it works</div>
+  <h2>Set up in minutes.<br>Works in every call.</h2>
+  <p class="section-sub">Koan sits in your Zoom sidebar and listens. When a prospect asks a question, it finds the right answer from your knowledge base and surfaces it to you — silently, instantly.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Connect your knowledge</div>
+      <div class="step-desc">Upload FAQs, pricing docs, playbooks — anything your team references. Koan indexes everything semantically.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Open Koan in Zoom</div>
+      <div class="step-desc">Install once from the Zoom App Marketplace. Open the sidebar at the start of any call.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Answers appear automatically</div>
+      <div class="step-desc">Koan detects questions in the live transcript and surfaces the right answer in seconds.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-title">Close with confidence</div>
+      <div class="step-desc">No more "let me check on that." Your team always has the answer — instantly, silently.</div>
+    </div>
+  </div>
+</div>
+
+<div class="use" id="use">
+  <div class="section-label">Use cases</div>
+  <h2>For any team that<br>sells on calls.</h2>
+  <div class="use-grid">
+    <div class="use-item">
+      <div class="use-icon">🏛️</div>
+      <div class="use-title">Event venues</div>
+      <div class="use-desc">Pricing, capacity, and policies answered instantly on every prospect call.</div>
+    </div>
+    <div class="use-item">
+      <div class="use-icon">🏠</div>
+      <div class="use-title">Real estate</div>
+      <div class="use-desc">Property specs and HOA details surfaced without breaking eye contact.</div>
+    </div>
+    <div class="use-item">
+      <div class="use-icon">💼</div>
+      <div class="use-title">SaaS sales</div>
+      <div class="use-desc">Feature questions and pricing tiers — no more putting callers on hold.</div>
+    </div>
+    <div class="use-item">
+      <div class="use-icon">⚕️</div>
+      <div class="use-title">Healthcare</div>
+      <div class="use-desc">Coverage details and intake questions handled with confidence.</div>
+    </div>
+    <div class="use-item">
+      <div class="use-icon">🎓</div>
+      <div class="use-title">Education</div>
+      <div class="use-desc">Admissions, tuition, and program details accurate on every enrollment call.</div>
+    </div>
+    <div class="use-item">
+      <div class="use-icon">⚙️</div>
+      <div class="use-title">Any industry</div>
+      <div class="use-desc">If your team takes calls and has a knowledge base, Koan works for you.</div>
+    </div>
+  </div>
+</div>
+
+<div class="waitlist" id="waitlist">
+  <div class="waitlist-inner">
+    <div class="section-label">Early access</div>
+    <h2>Be first in line.</h2>
+    <p class="waitlist-sub">We're onboarding a small group of teams in private beta. Drop your email and we'll reach out when your spot opens up.</p>
+    <div class="waitlist-form" id="wl-form">
+      <input class="waitlist-input" type="email" id="email-input" placeholder="you@company.com" />
+      <button class="btn-white" onclick="submitWaitlist()">Join waitlist</button>
+    </div>
+    <p class="success-msg" id="success-msg">✓ You're on the list. We'll be in touch.</p>
+  </div>
+</div>
+
+<footer>
+  <span style="font-weight:600; color: var(--text-2); letter-spacing:-0.02em;">Koan</span>
+  <span>© 2026 Koan. All rights reserved.</span>
+</footer>
+
+<script>
+
+function submitWaitlist() {
+  const email = document.getElementById('email-input').value;
+  if (!email || !email.includes('@')) {
+    document.getElementById('email-input').style.borderColor = 'rgba(255,255,255,0.6)';
+    return;
+  }
+  document.getElementById('wl-form').style.display = 'none';
+  document.getElementById('success-msg').style.display = 'block';
+}
+
+document.querySelectorAll('a[href="#waitlist"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById('waitlist').scrollIntoView({behavior:'smooth'});
+  });
+});
+document.querySelectorAll('a[href="#how"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById('how').scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
+
