@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Koan</title>
+  <script src="https://appssdk.zoom.us/1.5.0/zoomsdk.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: white; padding: 16px; }
+    .header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e5e5; }
+    .logo { width: 24px; height: 24px; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; }
+    .logo-text h3 { font-size: 13px; font-weight: 600; }
+    .answers { min-height: 200px; max-height: 400px; overflow-y: auto; margin-bottom: 12px; }
+    .answer { background: #f0f9ff; border-left: 3px solid #2563eb; padding: 10px; margin-bottom: 8px; border-radius: 4px; font-size: 12px; }
+    .ans-primary { font-weight: 700; color: #1e40af; margin-bottom: 4px; }
+    .ans-detail { color: #1e40af; font-size: 11px; margin-top: 4px; }
+    .status { font-size: 11px; color: #666; text-align: center; padding: 8px; background: #fafafa; border-radius: 4px; }
+    .status.active { background: #ecfdf5; color: #059669; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">◆</div>
+    <div class="logo-text"><h3>Koan</h3></div>
+  </div>
+  <div class="answers" id="answers">Waiting for captions...</div>
+  <div class="status" id="status">Initializing...</div>
+
+  <script>
+    let accessToken = null;
+    let meetingId = null;
+    let lastCaption = null;
+
+    ZoomSdk.onReady(async () => {
+      try {
+        const ctx = await ZoomSdk.getAppContext();
+        meetingId = ctx.meetingID;
+        console.log('Meeting ID:', meetingId);
+        
+        // Get access token from URL params or session
+        const params = new URLSearchParams(window.location.search);
+        accessToken = params.get('access_token') || sessionStorage.getItem('zoom_access_token');
+        
+        if (accessToken) {
+          document.getElementById('status').textContent = 'Connected';
+          document.getElementById('status').classList.add('active');
+          startCaptionPolling();
+        } else {
+          document.getElementById('status').textContent = 'Waiting for authorization...';
+        }
+      } catch (e) {
+        console.error('Zoom SDK error:', e);
+        document.getElementById('status').textContent = 'Error: ' + e.message;
+      }
+    });
+
+    async function startCaptionPolling() {
+      setInterval(async () => {
+        try {
+          // Fetch captions from meeting
+          const response = await fetch(`/zoom/captions/${meetingId}?access_token=${accessToken}`);
+          const data = await response.json();
+          
+          if (data.recording && data.recording.recording_files) {
+            // Process any new captions
+            for (const file of data.recording.recording_files) {
+              if (file.recording_type === 'transcript' && file.id !== lastCaption) {
+                lastCaption = file.id;
+                await processCaption(file.file_name);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Caption polling error:', e);
+        }
+      }, 2000); // Poll every 2 seconds
+    }
+
+    async function processCaption(caption) {
+      try {
+        const response = await fetch('/zoom/process_caption', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ caption: caption })
+        });
+        const answer = await response.json();
+        displayAnswer(caption, answer);
+      } catch (e) {
+        console.error('Caption processing error:', e);
+      }
+    }
+
+    function displayAnswer(caption, answer) {
+      const ar = document.getElementById('answers');
+      if (ar.textContent === 'Waiting for captions...') ar.innerHTML = '';
+      
+      const p = answer.answer.split('\n...\n');
+      const e = document.createElement('div');
+      e.className = 'answer';
+      e.innerHTML = '<div class="ans-primary">' + p[0].trim() + '</div>' + 
+                    (p[1] ? '<div class="ans-detail">' + p[1].trim() + '</div>' : '');
+      ar.insertBefore(e, ar.firstChild);
+    }
+  </script>
+</body>
+</html>
