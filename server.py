@@ -253,3 +253,38 @@ async def koan_websocket(websocket: WebSocket, session_id: str):
                     }))
     except Exception as e:
         print(f"Koan WebSocket error: {e}")
+
+import base64
+
+@app.get("/zoom/oauth")
+async def zoom_oauth(code: str = None, state: str = None):
+    """Handle Zoom OAuth callback"""
+    if not code:
+        return {"error": "No authorization code"}
+    
+    # Exchange code for access token
+    auth_str = f"{os.getenv('ZOOM_CLIENT_ID')}:{os.getenv('ZOOM_CLIENT_SECRET')}"
+    auth_b64 = base64.b64encode(auth_str.encode()).decode()
+    
+    try:
+        token_response = requests.post(
+            "https://zoom.us/oauth/token",
+            headers={"Authorization": f"Basic {auth_b64}"},
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": "https://koan-0tws.onrender.com/zoom/oauth"
+            }
+        )
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
+        
+        # Store token (in production, use a database)
+        # For now, return it to the sidebar
+        return {
+            "status": "authorized",
+            "access_token": access_token,
+            "message": "Ready to fetch captions"
+        }
+    except Exception as e:
+        return {"error": str(e)}
