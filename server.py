@@ -288,3 +288,31 @@ async def zoom_oauth(code: str = None, state: str = None):
         }
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/zoom/captions/{meeting_id}")
+async def fetch_zoom_captions(meeting_id: str, access_token: str):
+    """Fetch live captions from a Zoom meeting"""
+    try:
+        response = requests.get(
+            f"https://api.zoom.us/v2/meetings/{meeting_id}/recordings",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        
+        if response.status_code == 200:
+            recording = response.json()
+            # Return caption file if available
+            return {"meeting_id": meeting_id, "recording": recording}
+        else:
+            return {"error": "Meeting not found or captions not available"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/zoom/process_caption")
+async def process_caption(request: dict):
+    """Take a caption and run it through Koan"""
+    caption = request.get("caption", "")
+    if not caption:
+        return {"error": "No caption provided"}
+    
+    result = assistant.generate_answer(caption)
+    return result
