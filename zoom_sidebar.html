@@ -23,60 +23,65 @@
     <div class="logo">◆</div>
     <div class="logo-text"><h3>Koan</h3></div>
   </div>
-  <div class="answers" id="answers">Waiting for captions...</div>
+  <div class="answers" id="answers">Listening...</div>
   <div class="status" id="status">Initializing...</div>
 
   <script>
-    let accessToken = null;
     let meetingId = null;
-    let lastCaption = null;
 
     ZoomSdk.onReady(async () => {
       try {
         const ctx = await ZoomSdk.getAppContext();
         meetingId = ctx.meetingID;
         console.log('Meeting ID:', meetingId);
-        
-        // Get access token from URL params or session
-        const params = new URLSearchParams(window.location.search);
-        accessToken = params.get('access_token') || sessionStorage.getItem('zoom_access_token');
-        
-        if (accessToken) {
-          document.getElementById('status').textContent = 'Connected';
-          document.getElementById('status').classList.add('active');
-          startCaptionPolling();
-        } else {
-          document.getElementById('status').textContent = 'Waiting for authorization...';
-        }
+
+        document.getElementById('status').textContent = 'Listening...';
+        document.getElementById('status').classList.add('active');
+
+        setupEventListeners();
       } catch (e) {
         console.error('Zoom SDK error:', e);
         document.getElementById('status').textContent = 'Error: ' + e.message;
       }
     });
 
-    async function startCaptionPolling() {
-      setInterval(async () => {
-        try {
-          // Fetch captions from meeting
-          const response = await fetch(`/zoom/captions/${meetingId}?access_token=${accessToken}`);
-          const data = await response.json();
-          
-          if (data.recording && data.recording.recording_files) {
-            // Process any new captions
-            for (const file of data.recording.recording_files) {
-              if (file.recording_type === 'transcript' && file.id !== lastCaption) {
-                lastCaption = file.id;
-                await processCaption(file.file_name);
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Caption polling error:', e);
+    function setupEventListeners() {
+      // Listen for caption/transcript events
+      ZoomSdk.addEventListener('onCaptionStatusChange', async (event) => {
+        console.log('Caption status change:', event);
+        if (event.payload && event.payload.caption) {
+          await processCaption(event.payload.caption);
         }
-      }, 2000); // Poll every 2 seconds
+      });
+
+      // Listen for live transcription messages
+      ZoomSdk.addEventListener('onLiveTranscriptionMessageReceived', async (event) => {
+        console.log('Live transcription received:', event);
+        if (event.payload && event.payload.text) {
+          await processCaption(event.payload.text);
+        }
+      });
+
+      // Listen for active speaker changes which may include caption data
+      ZoomSdk.addEventListener('onMyActiveSpeakerChange', async (event) => {
+        console.log('Active speaker change:', event);
+        if (event.payload && event.payload.caption) {
+          await processCaption(event.payload.caption);
+        }
+      });
+
+      // Fallback: Listen for any caption-related events
+      ZoomSdk.addEventListener('onCaption', async (event) => {
+        console.log('Caption event:', event);
+        if (event.payload && event.payload.text) {
+          await processCaption(event.payload.text);
+        }
+      });
     }
 
     async function processCaption(caption) {
+      if (!caption || caption.trim() === '') return;
+
       try {
         const response = await fetch('/zoom/process_caption', {
           method: 'POST',
@@ -92,12 +97,12 @@
 
     function displayAnswer(caption, answer) {
       const ar = document.getElementById('answers');
-      if (ar.textContent === 'Waiting for captions...') ar.innerHTML = '';
-      
+      if (ar.textContent === 'Listening...') ar.innerHTML = '';
+
       const p = answer.answer.split('\n...\n');
       const e = document.createElement('div');
       e.className = 'answer';
-      e.innerHTML = '<div class="ans-primary">' + p[0].trim() + '</div>' + 
+      e.innerHTML = '<div class="ans-primary">' + p[0].trim() + '</div>' +
                     (p[1] ? '<div class="ans-detail">' + p[1].trim() + '</div>' : '');
       ar.insertBefore(e, ar.firstChild);
     }
