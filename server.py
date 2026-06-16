@@ -35,6 +35,11 @@ async def get_demo():
     with open("voice_app_demo.html") as f:
         return Response(content=f.read(), media_type="text/html")
 
+@app.get("/zoom/sidebar")
+async def get_zoom_sidebar():
+    with open("zoom_sidebar.html") as f:
+        return Response(content=f.read(), media_type="text/html")
+
 @app.post("/api/answer")
 async def get_answer(request: dict):
     result = assistant.generate_answer(request.get("text", ""))
