@@ -63,6 +63,7 @@
         document.getElementById('status').classList.add('active');
 
         setupEventListeners();
+        await subscribeToLiveTranscription();
       } catch (e) {
         console.error('Zoom SDK error:', e);
         document.getElementById('status').textContent = 'Error: ' + e.message;
@@ -107,6 +108,90 @@
       });
 
       console.log('[SETUP] Event listeners registered for:', eventNames);
+    }
+
+    async function subscribeToLiveTranscription() {
+      console.log('[TRANSCRIPTION] Attempting to subscribe to live transcription...');
+
+      // Try startLiveTranscription
+      if (typeof ZoomSdk.startLiveTranscription === 'function') {
+        try {
+          console.log('[TRANSCRIPTION] Calling ZoomSdk.startLiveTranscription()...');
+          const result = await ZoomSdk.startLiveTranscription();
+          console.log('[TRANSCRIPTION] startLiveTranscription() success:', result);
+        } catch (e) {
+          console.log('[TRANSCRIPTION] startLiveTranscription() error:', e);
+        }
+      } else {
+        console.log('[TRANSCRIPTION] ZoomSdk.startLiveTranscription is not available');
+      }
+
+      // Try subscribeToTranscription
+      if (typeof ZoomSdk.subscribeToTranscription === 'function') {
+        try {
+          console.log('[TRANSCRIPTION] Calling ZoomSdk.subscribeToTranscription()...');
+          const result = await ZoomSdk.subscribeToTranscription();
+          console.log('[TRANSCRIPTION] subscribeToTranscription() success:', result);
+        } catch (e) {
+          console.log('[TRANSCRIPTION] subscribeToTranscription() error:', e);
+        }
+      } else {
+        console.log('[TRANSCRIPTION] ZoomSdk.subscribeToTranscription is not available');
+      }
+
+      // Try enableLiveTranscription
+      if (typeof ZoomSdk.enableLiveTranscription === 'function') {
+        try {
+          console.log('[TRANSCRIPTION] Calling ZoomSdk.enableLiveTranscription()...');
+          const result = await ZoomSdk.enableLiveTranscription();
+          console.log('[TRANSCRIPTION] enableLiveTranscription() success:', result);
+        } catch (e) {
+          console.log('[TRANSCRIPTION] enableLiveTranscription() error:', e);
+        }
+      } else {
+        console.log('[TRANSCRIPTION] ZoomSdk.enableLiveTranscription is not available');
+      }
+
+      // Try requestLiveTranscription
+      if (typeof ZoomSdk.requestLiveTranscription === 'function') {
+        try {
+          console.log('[TRANSCRIPTION] Calling ZoomSdk.requestLiveTranscription()...');
+          const result = await ZoomSdk.requestLiveTranscription();
+          console.log('[TRANSCRIPTION] requestLiveTranscription() success:', result);
+        } catch (e) {
+          console.log('[TRANSCRIPTION] requestLiveTranscription() error:', e);
+        }
+      } else {
+        console.log('[TRANSCRIPTION] ZoomSdk.requestLiveTranscription is not available');
+      }
+
+      // Try getLiveTranscription
+      if (typeof ZoomSdk.getLiveTranscription === 'function') {
+        try {
+          console.log('[TRANSCRIPTION] Calling ZoomSdk.getLiveTranscription()...');
+          const result = await ZoomSdk.getLiveTranscription();
+          console.log('[TRANSCRIPTION] getLiveTranscription() success:', result);
+        } catch (e) {
+          console.log('[TRANSCRIPTION] getLiveTranscription() error:', e);
+        }
+      } else {
+        console.log('[TRANSCRIPTION] ZoomSdk.getLiveTranscription is not available');
+      }
+
+      // Try requestMediaPermission
+      if (typeof ZoomSdk.requestMediaPermission === 'function') {
+        try {
+          console.log('[TRANSCRIPTION] Calling ZoomSdk.requestMediaPermission()...');
+          const result = await ZoomSdk.requestMediaPermission();
+          console.log('[TRANSCRIPTION] requestMediaPermission() success:', result);
+        } catch (e) {
+          console.log('[TRANSCRIPTION] requestMediaPermission() error:', e);
+        }
+      } else {
+        console.log('[TRANSCRIPTION] ZoomSdk.requestMediaPermission is not available');
+      }
+
+      console.log('[TRANSCRIPTION] Subscription attempt complete');
     }
 
     async function processCaption(caption) {
