@@ -24,12 +24,22 @@
     .send-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
     .send-btn:hover { background: #1e40af; }
     .send-btn:active { transform: scale(0.98); }
+    .debug-panel { margin-top: 12px; padding: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 10px; max-height: 200px; overflow-y: auto; }
+    .debug-title { font-weight: 600; margin-bottom: 6px; color: #333; }
+    .debug-line { margin: 3px 0; color: #555; font-family: monospace; word-break: break-word; }
+    .debug-error { color: #d32f2f; }
+    .debug-success { color: #388e3c; }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo">◆</div>
     <div class="logo-text"><h3>Koan</h3></div>
+  </div>
+  <div class="status" id="status">Initializing...</div>
+  <div class="debug-panel" id="debugPanel">
+    <div class="debug-title">Debug Info</div>
+    <div id="debugOutput"></div>
   </div>
   <div class="answers" id="answers">Listening...</div>
   <div class="test-input-section">
@@ -39,35 +49,92 @@
       <button class="send-btn" onclick="sendManualInput()">Send</button>
     </div>
   </div>
-  <div class="status" id="status">Initializing...</div>
 
   <script>
     let meetingId = null;
+    let sdkReady = false;
 
-    ZoomSdk.onReady(async () => {
+    function addDebugLine(text, isError = false, isSuccess = false) {
+      console.log(text);
+      const debugOutput = document.getElementById('debugOutput');
+      const line = document.createElement('div');
+      line.className = 'debug-line';
+      if (isError) line.classList.add('debug-error');
+      if (isSuccess) line.classList.add('debug-success');
+      line.textContent = text;
+      debugOutput.appendChild(line);
+    }
+
+    function updateStatus(text) {
+      document.getElementById('status').textContent = text;
+      addDebugLine(`STATUS: ${text}`);
+    }
+
+    async function initializeApp() {
+      if (sdkReady) return;
+      sdkReady = true;
+
+      addDebugLine('--- App Initialization Started ---', false, true);
+
       try {
+        updateStatus('SDK Ready');
+
+        // Get app context
+        addDebugLine('Calling ZoomSdk.getAppContext()...');
         const ctx = await ZoomSdk.getAppContext();
         meetingId = ctx.meetingID;
-        console.log('Meeting ID:', meetingId);
+        addDebugLine(`Meeting ID: ${meetingId}`, false, true);
 
-        // Get and log all supported APIs
+        // Get supported APIs
+        updateStatus('APIs loading...');
+        addDebugLine('Calling ZoomSdk.getSupportedJsApis()...');
         try {
           const supportedApis = await ZoomSdk.getSupportedJsApis();
-          console.log('[ZOOM SDK] Supported APIs:', supportedApis);
-          console.log('[ZOOM SDK] Total supported APIs:', supportedApis.length);
+          addDebugLine(`Available APIs: ${supportedApis.length}`, false, true);
+          supportedApis.forEach(api => {
+            addDebugLine(`  • ${api}`);
+          });
         } catch (apiErr) {
-          console.log('[ZOOM SDK] Could not retrieve supported APIs:', apiErr);
+          addDebugLine(`Could not retrieve APIs: ${apiErr.message}`, true);
         }
 
-        document.getElementById('status').textContent = 'Listening...';
-        document.getElementById('status').classList.add('active');
+        updateStatus('APIs loaded');
 
+        // Setup event listeners
+        addDebugLine('Setting up event listeners...');
         setupEventListeners();
+        addDebugLine('Event listeners ready', false, true);
+
+        // Subscribe to live transcription
+        updateStatus('Enabling transcription...');
+        addDebugLine('Attempting to enable live transcription...');
         await subscribeToLiveTranscription();
+
+        updateStatus('Listening...');
+        document.getElementById('status').classList.add('active');
+        addDebugLine('App fully initialized', false, true);
+
       } catch (e) {
-        console.error('Zoom SDK error:', e);
-        document.getElementById('status').textContent = 'Error: ' + e.message;
+        updateStatus('Error');
+        addDebugLine(`ERROR: ${e.message}`, true);
+        document.getElementById('status').classList.remove('active');
       }
+    }
+
+    // Try ZoomSdk.onReady first
+    addDebugLine('Setting up ZoomSdk.onReady handler...');
+    if (ZoomSdk && typeof ZoomSdk.onReady === 'function') {
+      ZoomSdk.onReady(initializeApp);
+      addDebugLine('ZoomSdk.onReady registered', false, true);
+    } else {
+      addDebugLine('ZoomSdk.onReady not available', true);
+    }
+
+    // Fallback: Also try window load event
+    addDebugLine('Setting up window.addEventListener(load) fallback...');
+    window.addEventListener('load', () => {
+      addDebugLine('window.load event fired', false, true);
+      initializeApp();
     });
 
     function setupEventListeners() {
@@ -111,87 +178,77 @@
     }
 
     async function subscribeToLiveTranscription() {
-      console.log('[TRANSCRIPTION] Attempting to subscribe to live transcription...');
+      addDebugLine('--- Transcription Subscription ---', false, true);
+
+      // Try getLiveTranscription first (primary method)
+      if (typeof ZoomSdk.getLiveTranscription === 'function') {
+        try {
+          addDebugLine('Calling ZoomSdk.getLiveTranscription()...');
+          const result = await ZoomSdk.getLiveTranscription();
+          addDebugLine('getLiveTranscription() success', false, true);
+          if (result) {
+            addDebugLine(`Result: ${JSON.stringify(result)}`);
+          }
+          return;
+        } catch (e) {
+          addDebugLine(`getLiveTranscription() error: ${e.message}`, true);
+        }
+      } else {
+        addDebugLine('ZoomSdk.getLiveTranscription not available', true);
+      }
 
       // Try startLiveTranscription
       if (typeof ZoomSdk.startLiveTranscription === 'function') {
         try {
-          console.log('[TRANSCRIPTION] Calling ZoomSdk.startLiveTranscription()...');
+          addDebugLine('Calling ZoomSdk.startLiveTranscription()...');
           const result = await ZoomSdk.startLiveTranscription();
-          console.log('[TRANSCRIPTION] startLiveTranscription() success:', result);
+          addDebugLine('startLiveTranscription() success', false, true);
+          if (result) {
+            addDebugLine(`Result: ${JSON.stringify(result)}`);
+          }
+          return;
         } catch (e) {
-          console.log('[TRANSCRIPTION] startLiveTranscription() error:', e);
+          addDebugLine(`startLiveTranscription() error: ${e.message}`, true);
         }
       } else {
-        console.log('[TRANSCRIPTION] ZoomSdk.startLiveTranscription is not available');
+        addDebugLine('ZoomSdk.startLiveTranscription not available', true);
       }
 
       // Try subscribeToTranscription
       if (typeof ZoomSdk.subscribeToTranscription === 'function') {
         try {
-          console.log('[TRANSCRIPTION] Calling ZoomSdk.subscribeToTranscription()...');
+          addDebugLine('Calling ZoomSdk.subscribeToTranscription()...');
           const result = await ZoomSdk.subscribeToTranscription();
-          console.log('[TRANSCRIPTION] subscribeToTranscription() success:', result);
+          addDebugLine('subscribeToTranscription() success', false, true);
+          if (result) {
+            addDebugLine(`Result: ${JSON.stringify(result)}`);
+          }
+          return;
         } catch (e) {
-          console.log('[TRANSCRIPTION] subscribeToTranscription() error:', e);
+          addDebugLine(`subscribeToTranscription() error: ${e.message}`, true);
         }
       } else {
-        console.log('[TRANSCRIPTION] ZoomSdk.subscribeToTranscription is not available');
+        addDebugLine('ZoomSdk.subscribeToTranscription not available', true);
       }
 
       // Try enableLiveTranscription
       if (typeof ZoomSdk.enableLiveTranscription === 'function') {
         try {
-          console.log('[TRANSCRIPTION] Calling ZoomSdk.enableLiveTranscription()...');
+          addDebugLine('Calling ZoomSdk.enableLiveTranscription()...');
           const result = await ZoomSdk.enableLiveTranscription();
-          console.log('[TRANSCRIPTION] enableLiveTranscription() success:', result);
+          addDebugLine('enableLiveTranscription() success', false, true);
+          if (result) {
+            addDebugLine(`Result: ${JSON.stringify(result)}`);
+          }
+          return;
         } catch (e) {
-          console.log('[TRANSCRIPTION] enableLiveTranscription() error:', e);
+          addDebugLine(`enableLiveTranscription() error: ${e.message}`, true);
         }
       } else {
-        console.log('[TRANSCRIPTION] ZoomSdk.enableLiveTranscription is not available');
+        addDebugLine('ZoomSdk.enableLiveTranscription not available', true);
       }
 
-      // Try requestLiveTranscription
-      if (typeof ZoomSdk.requestLiveTranscription === 'function') {
-        try {
-          console.log('[TRANSCRIPTION] Calling ZoomSdk.requestLiveTranscription()...');
-          const result = await ZoomSdk.requestLiveTranscription();
-          console.log('[TRANSCRIPTION] requestLiveTranscription() success:', result);
-        } catch (e) {
-          console.log('[TRANSCRIPTION] requestLiveTranscription() error:', e);
-        }
-      } else {
-        console.log('[TRANSCRIPTION] ZoomSdk.requestLiveTranscription is not available');
-      }
-
-      // Try getLiveTranscription
-      if (typeof ZoomSdk.getLiveTranscription === 'function') {
-        try {
-          console.log('[TRANSCRIPTION] Calling ZoomSdk.getLiveTranscription()...');
-          const result = await ZoomSdk.getLiveTranscription();
-          console.log('[TRANSCRIPTION] getLiveTranscription() success:', result);
-        } catch (e) {
-          console.log('[TRANSCRIPTION] getLiveTranscription() error:', e);
-        }
-      } else {
-        console.log('[TRANSCRIPTION] ZoomSdk.getLiveTranscription is not available');
-      }
-
-      // Try requestMediaPermission
-      if (typeof ZoomSdk.requestMediaPermission === 'function') {
-        try {
-          console.log('[TRANSCRIPTION] Calling ZoomSdk.requestMediaPermission()...');
-          const result = await ZoomSdk.requestMediaPermission();
-          console.log('[TRANSCRIPTION] requestMediaPermission() success:', result);
-        } catch (e) {
-          console.log('[TRANSCRIPTION] requestMediaPermission() error:', e);
-        }
-      } else {
-        console.log('[TRANSCRIPTION] ZoomSdk.requestMediaPermission is not available');
-      }
-
-      console.log('[TRANSCRIPTION] Subscription attempt complete');
+      addDebugLine('No transcription methods available', true);
     }
 
     async function processCaption(caption) {
