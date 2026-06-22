@@ -50,6 +50,15 @@
         meetingId = ctx.meetingID;
         console.log('Meeting ID:', meetingId);
 
+        // Get and log all supported APIs
+        try {
+          const supportedApis = await ZoomSdk.getSupportedJsApis();
+          console.log('[ZOOM SDK] Supported APIs:', supportedApis);
+          console.log('[ZOOM SDK] Total supported APIs:', supportedApis.length);
+        } catch (apiErr) {
+          console.log('[ZOOM SDK] Could not retrieve supported APIs:', apiErr);
+        }
+
         document.getElementById('status').textContent = 'Listening...';
         document.getElementById('status').classList.add('active');
 
@@ -61,36 +70,33 @@
     });
 
     function setupEventListeners() {
-      // Listen for caption/transcript events
-      ZoomSdk.addEventListener('onCaptionStatusChange', async (event) => {
-        console.log('[SDK EVENT] onCaptionStatusChange:', event);
-        if (event.payload && event.payload.caption) {
-          await processCaption(event.payload.caption);
-        }
-      });
+      const eventNames = [
+        'onLiveTranscriptionMessageReceived',
+        'onLiveTranscriptionMessage',
+        'onTranscriptionMessage',
+        'onCaption',
+        'onCaptionMessage',
+        'onActiveSpeaker',
+        'onMyActiveSpeakerChange',
+        'onMeetingTranscription',
+        'onCaptionStatusChange'
+      ];
 
-      // Listen for live transcription messages
-      ZoomSdk.addEventListener('onLiveTranscriptionMessageReceived', async (event) => {
-        console.log('[SDK EVENT] onLiveTranscriptionMessageReceived:', event);
-        if (event.payload && event.payload.text) {
-          await processCaption(event.payload.text);
-        }
-      });
+      // Register all possible caption/transcript event listeners
+      eventNames.forEach((eventName) => {
+        ZoomSdk.addEventListener(eventName, async (event) => {
+          console.log(`[EVENT FIRED: ${eventName}]`, event);
 
-      // Listen for active speaker changes which may include caption data
-      ZoomSdk.addEventListener('onMyActiveSpeakerChange', async (event) => {
-        console.log('[SDK EVENT] onMyActiveSpeakerChange:', event);
-        if (event.payload && event.payload.caption) {
-          await processCaption(event.payload.caption);
-        }
-      });
+          // Try to extract caption text from various payload structures
+          let caption = null;
+          if (event.payload) {
+            caption = event.payload.text || event.payload.caption || event.payload.message;
+          }
 
-      // Fallback: Listen for any caption-related events
-      ZoomSdk.addEventListener('onCaption', async (event) => {
-        console.log('[SDK EVENT] onCaption:', event);
-        if (event.payload && event.payload.text) {
-          await processCaption(event.payload.text);
-        }
+          if (caption) {
+            await processCaption(caption);
+          }
+        });
       });
 
       // Setup manual input form
@@ -99,6 +105,8 @@
           sendManualInput();
         }
       });
+
+      console.log('[SETUP] Event listeners registered for:', eventNames);
     }
 
     async function processCaption(caption) {
