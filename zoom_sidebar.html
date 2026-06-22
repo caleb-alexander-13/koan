@@ -123,26 +123,42 @@
     addDebugLine('Initializing ZoomSdk.config()...', false, true);
     updateStatus('Configuring SDK...');
 
+    let configTimeoutId = null;
+
     if (ZoomSdk && typeof ZoomSdk.config === 'function') {
+      // Start 5-second timeout
+      configTimeoutId = setTimeout(() => {
+        if (!sdkReady) {
+          addDebugLine('ZoomSdk.config() timeout - no response after 5 seconds', true);
+          updateStatus('Config timeout');
+          // Try fallback
+          addDebugLine('Attempting fallback to window.load...', false, true);
+        }
+      }, 5000);
+
+      // Call config with empty capabilities array for initial test
+      addDebugLine('Calling ZoomSdk.config({ capabilities: [] })...');
       ZoomSdk.config({
-        capabilities: [
-          'getLiveTranscription',
-          'onLiveTranscriptionMessageReceived',
-          'getSupportedJsApis',
-          'getAppContext'
-        ]
+        capabilities: []
       }).then(() => {
-        addDebugLine('ZoomSdk.config() resolved successfully', false, true);
+        clearTimeout(configTimeoutId);
+        addDebugLine('ZoomSdk.config() resolved successfully!', false, true);
         updateStatus('SDK Ready');
         initializeApp();
       }).catch((err) => {
-        addDebugLine(`ZoomSdk.config() error: ${err.message}`, true);
+        clearTimeout(configTimeoutId);
+        addDebugLine(`ZoomSdk.config() rejected with error:`, true);
+        addDebugLine(`  Error: ${err.message}`, true);
+        if (err.stack) {
+          addDebugLine(`  Stack: ${err.stack}`, true);
+        }
         updateStatus('Config Error');
         // Try fallback to window load anyway
         addDebugLine('Attempting fallback to window.load...', false, true);
       });
     } else {
       addDebugLine('ZoomSdk.config is not available', true);
+      updateStatus('No config method');
     }
 
     // Fallback: Also try window load event
@@ -150,7 +166,10 @@
     window.addEventListener('load', () => {
       addDebugLine('window.load event fired', false, true);
       if (!sdkReady) {
+        addDebugLine('Triggering initializeApp from window.load', false, true);
         initializeApp();
+      } else {
+        addDebugLine('App already initialized, skipping window.load init');
       }
     });
 
