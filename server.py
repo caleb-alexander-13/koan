@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from contextlib import asynccontextmanager
 import json
 import os
 import time
@@ -14,7 +15,17 @@ import asyncio
 import websockets
 from retrieval_pipeline import KoanAssistant
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Server lifespan context manager"""
+    # Startup
+    print("STARTUP: Connecting to Zoom WebSocket...")
+    asyncio.create_task(connect_zoom_websocket())
+    yield
+    # Shutdown
+    print("SHUTDOWN: Server closing...")
+
+app = FastAPI(lifespan=lifespan)
 
 # In-memory store for latest answer
 latest_answer = {
@@ -54,88 +65,113 @@ ZOOM_EVENT_WEBSOCKET_URL = "wss://ws.zoom.us/ws?subscriptionId=ncuuFdj6TOOvx4hjj
 # Track Zoom event WebSocket connection
 zoom_event_websocket = None
 
-async def connect_to_zoom_events():
+async def connect_zoom_websocket():
     """Connect to Zoom's event WebSocket and listen for meeting events"""
     global zoom_event_websocket
 
     try:
-        print("Connecting to Zoom event WebSocket...")
+        print(f"[ZOOM] Attempting to connect to: {ZOOM_EVENT_WEBSOCKET_URL}")
         async with websockets.connect(ZOOM_EVENT_WEBSOCKET_URL) as websocket:
             zoom_event_websocket = websocket
-            print("Connected to Zoom event WebSocket")
+            print("[ZOOM] ✓ Connected to event WebSocket successfully")
 
             # Start heartbeat task
+            print("[ZOOM] Starting heartbeat task...")
             heartbeat_task = asyncio.create_task(send_heartbeat(websocket))
 
             try:
                 # Listen for incoming messages
+                print("[ZOOM] Listening for events...")
                 async for message_str in websocket:
                     try:
                         message = json.loads(message_str)
-                        print(f"Zoom event received: {message.get('event')}")
+                        event = message.get('event', 'unknown')
+                        print(f"[ZOOM] Event received: {event}")
 
                         # Handle meeting.rtms_started event
-                        if message.get("event") == "meeting.rtms_started":
+                        if event == "meeting.rtms_started":
+                            print("[ZOOM] Processing meeting.rtms_started event")
                             payload = message.get("payload", {})
                             server_urls = payload.get("server_urls", [])
+                            meeting_id = payload.get("meeting_id", "unknown")
+
+                            print(f"[ZOOM] Meeting ID: {meeting_id}")
+                            print(f"[ZOOM] Server URLs count: {len(server_urls) if server_urls else 0}")
 
                             if server_urls:
                                 # Get the first server URL for RTMS
                                 rtms_url = server_urls[0] if isinstance(server_urls, list) else server_urls
                                 access_token = payload.get("access_token", "")
-                                meeting_id = payload.get("meeting_id", "unknown")
+
+                                print(f"[ZOOM] RTMS URL: {rtms_url[:50]}...")
+                                print(f"[ZOOM] Access token present: {bool(access_token)}")
 
                                 if rtms_url and access_token:
-                                    print(f"RTMS started for meeting {meeting_id}")
+                                    print(f"[ZOOM] ✓ Starting RTMS connection for meeting {meeting_id}")
                                     # Connect to RTMS WebSocket
                                     asyncio.create_task(connect_to_rtms(rtms_url, access_token, meeting_id))
-                    except json.JSONDecodeError:
-                        print(f"Could not parse Zoom event: {message_str[:100]}")
+                                else:
+                                    print(f"[ZOOM] ✗ Missing RTMS URL or token")
+                            else:
+                                print(f"[ZOOM] ✗ No server URLs in payload")
+                        else:
+                            print(f"[ZOOM] Ignoring event type: {event}")
+                    except json.JSONDecodeError as e:
+                        print(f"[ZOOM] ✗ JSON parse error: {str(e)[:100]}")
                     except Exception as e:
-                        print(f"Error processing Zoom event: {e}")
+                        print(f"[ZOOM] ✗ Error processing event: {e}")
             finally:
+                print("[ZOOM] Message listening stopped, cancelling heartbeat...")
                 heartbeat_task.cancel()
                 zoom_event_websocket = None
     except Exception as e:
-        print(f"Zoom event WebSocket error: {e}")
+        print(f"[ZOOM] ✗ WebSocket connection error: {e}")
         zoom_event_websocket = None
+        await asyncio.sleep(5)  # Wait before reconnecting
+        print("[ZOOM] Attempting to reconnect in background...")
+        asyncio.create_task(connect_zoom_websocket())
 
 async def send_heartbeat(websocket):
     """Send heartbeat to keep Zoom event WebSocket alive"""
     try:
+        print("[HEARTBEAT] Starting heartbeat loop (30s interval)...")
         while True:
             await asyncio.sleep(30)
             heartbeat = {"module": "heartbeat"}
             await websocket.send(json.dumps(heartbeat))
-            print("Heartbeat sent to Zoom event WebSocket")
+            print("[HEARTBEAT] ✓ Heartbeat sent")
     except asyncio.CancelledError:
-        print("Heartbeat task cancelled")
+        print("[HEARTBEAT] Task cancelled")
     except Exception as e:
-        print(f"Heartbeat error: {e}")
+        print(f"[HEARTBEAT] ✗ Error: {e}")
 
 async def connect_to_rtms(rtms_url: str, access_token: str, meeting_id: str):
     """Connect to RTMS WebSocket and process transcript messages"""
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
+        print(f"[RTMS] Connecting for meeting {meeting_id}...")
+        print(f"[RTMS] URL: {rtms_url[:50]}...")
         async with websockets.connect(rtms_url, extra_headers=headers) as websocket:
-            print(f"RTMS WebSocket connected for meeting {meeting_id}")
+            print(f"[RTMS] ✓ Connected for meeting {meeting_id}")
             rtms_connections[meeting_id] = websocket
 
             try:
+                print(f"[RTMS] Listening for transcripts on meeting {meeting_id}...")
                 async for message_str in websocket:
                     try:
                         message = json.loads(message_str)
+                        print(f"[RTMS] Message received (type: {message.get('type', 'unknown')})")
                         await process_rtms_message(message, meeting_id)
-                    except json.JSONDecodeError:
-                        print(f"Could not parse RTMS message: {message_str[:100]}")
+                    except json.JSONDecodeError as e:
+                        print(f"[RTMS] ✗ JSON parse error: {str(e)[:100]}")
                     except Exception as e:
-                        print(f"Error processing RTMS message: {e}")
+                        print(f"[RTMS] ✗ Error processing message: {e}")
             finally:
                 rtms_connections.pop(meeting_id, None)
-                print(f"RTMS WebSocket closed for meeting {meeting_id}")
+                print(f"[RTMS] ✓ Connection closed for meeting {meeting_id}")
     except Exception as e:
-        print(f"RTMS WebSocket error for meeting {meeting_id}: {e}")
+        print(f"[RTMS] ✗ Connection error for meeting {meeting_id}: {e}")
         rtms_connections.pop(meeting_id, None)
 
 @app.on_event("startup")
@@ -199,13 +235,16 @@ async def process_rtms_message(message: dict, meeting_id: str):
     # Look for transcript in message
     transcript = None
     if message.get("msg_type") == "TRANSCRIPT":
+        print(f"[RTMS] Found TRANSCRIPT msg_type")
         transcript = message.get("transcript", "")
     elif "transcript" in message:
+        print(f"[RTMS] Found transcript field in message")
         transcript = message.get("transcript", "")
 
     if transcript and isinstance(transcript, str) and transcript.strip():
-        print(f"RTMS transcript received: {transcript[:100]}...")
+        print(f"[RTMS] ✓ Processing transcript: {transcript[:100]}...")
         try:
+            print(f"[RTMS] Calling assistant.generate_answer()...")
             result = assistant.generate_answer(transcript)
             latest_answer = {
                 "id": str(uuid.uuid4()),
@@ -213,9 +252,11 @@ async def process_rtms_message(message: dict, meeting_id: str):
                 "answer": result,
                 "timestamp": time.time()
             }
-            print(f"Answer stored with ID: {latest_answer['id']}")
+            print(f"[RTMS] ✓ Answer stored with ID: {latest_answer['id']}")
         except Exception as e:
-            print(f"Error processing RTMS transcript: {e}")
+            print(f"[RTMS] ✗ Error processing transcript: {e}")
+    else:
+        print(f"[RTMS] No transcript found in message or empty")
 
 @app.post("/zoom/webhook")
 async def zoom_webhook(request: Request):
