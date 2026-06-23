@@ -3332,27 +3332,55 @@ window.ZoomSdk = zoomSdk;
           addDebugLine('ZoomSdk.config() resolved successfully!', false, true);
           updateStatus('SDK Ready');
 
-          // Register listener for live transcription messages
-          addDebugLine('Registering onLiveTranscriptionMessageReceived listener...', false, true);
-          ZoomSdk.addEventListener('onLiveTranscriptionMessageReceived', function(event) {
-            addDebugLine('[TRANSCRIPT] onLiveTranscriptionMessageReceived fired!', false, true);
-            console.log('[TRANSCRIPT]', event);
+          // Request transcription access explicitly
+          addDebugLine('Calling ZoomSdk.getLiveTranscription()...', false, true);
+          try {
+            ZoomSdk.getLiveTranscription().then((result) => {
+              addDebugLine('ZoomSdk.getLiveTranscription() resolved:', false, true);
+              addDebugLine(`  Result: ${JSON.stringify(result)}`, false, true);
+            }).catch((err) => {
+              addDebugLine(`ZoomSdk.getLiveTranscription() error: ${err.message}`, true);
+            });
+          } catch (e) {
+            addDebugLine(`ZoomSdk.getLiveTranscription() exception: ${e.message}`, true);
+          }
 
-            try {
-              let caption = null;
-              if (event.payload) {
-                caption = event.payload.text || event.payload.message || event.payload.caption;
-              }
+          // Register listeners for all possible transcription/caption events
+          const eventNames = [
+            'onLiveTranscriptionMessageReceived',
+            'onLiveTranscriptionMessage',
+            'onMeetingTranscriptionMessage',
+            'onTranscription',
+            'onCaptionMessage',
+            'onActiveSpeaker',
+            'onMyActiveSpeakerChange',
+            'onUserAudioStatusChange'
+          ];
 
-              if (caption) {
-                addDebugLine(`[TRANSCRIPT] Received: ${caption.substring(0, 50)}...`, false, true);
-                processCaption(caption);
+          eventNames.forEach((eventName) => {
+            addDebugLine(`Registering listener for ${eventName}...`, false, true);
+            ZoomSdk.addEventListener(eventName, function(event) {
+              addDebugLine(`[EVENT FIRED] ${eventName}`, false, true);
+              addDebugLine(`  Full event data: ${JSON.stringify(event)}`, false, true);
+              console.log(`[${eventName}]`, event);
+
+              // Try to process caption from common payload structures
+              try {
+                let caption = null;
+                if (event.payload) {
+                  caption = event.payload.text || event.payload.message || event.payload.caption;
+                }
+
+                if (caption) {
+                  addDebugLine(`  Caption text: ${caption.substring(0, 60)}...`, false, true);
+                  processCaption(caption);
+                }
+              } catch (e) {
+                addDebugLine(`  Error processing event: ${e.message}`, true);
               }
-            } catch (e) {
-              addDebugLine(`[TRANSCRIPT] Error: ${e.message}`, true);
-            }
+            });
           });
-          addDebugLine('Listener registered successfully', false, true);
+          addDebugLine(`All ${eventNames.length} event listeners registered`, false, true);
 
           // Setup manual input form
           document.getElementById('testInput').addEventListener('keypress', (e) => {
@@ -3363,7 +3391,7 @@ window.ZoomSdk = zoomSdk;
 
           updateStatus('Listening...');
           document.getElementById('status').classList.add('active');
-          addDebugLine('App fully initialized', false, true);
+          addDebugLine('App fully initialized, waiting for transcript events', false, true);
           sdkReady = true;
 
         }).catch((err) => {
