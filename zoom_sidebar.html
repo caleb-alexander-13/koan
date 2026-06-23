@@ -70,243 +70,6 @@
       addDebugLine(`STATUS: ${text}`);
     }
 
-    async function initializeApp() {
-      if (sdkReady) return;
-      sdkReady = true;
-
-      addDebugLine('--- App Initialization Started ---', false, true);
-
-      try {
-        // Get app context
-        addDebugLine('Calling ZoomSdk.getAppContext()...');
-        const ctx = await ZoomSdk.getAppContext();
-        meetingId = ctx.meetingID;
-        addDebugLine(`Meeting ID: ${meetingId}`, false, true);
-
-        // Get supported APIs
-        updateStatus('APIs loading...');
-        addDebugLine('Calling ZoomSdk.getSupportedJsApis()...');
-        try {
-          const supportedApis = await ZoomSdk.getSupportedJsApis();
-          addDebugLine(`Available APIs: ${supportedApis.length}`, false, true);
-          supportedApis.forEach(api => {
-            addDebugLine(`  • ${api}`);
-          });
-        } catch (apiErr) {
-          addDebugLine(`Could not retrieve APIs: ${apiErr.message}`, true);
-        }
-
-        updateStatus('APIs loaded');
-
-        // Setup event listeners
-        addDebugLine('Setting up event listeners...');
-        setupEventListeners();
-        addDebugLine('Event listeners ready', false, true);
-
-        // Subscribe to live transcription
-        updateStatus('Enabling transcription...');
-        addDebugLine('Attempting to enable live transcription...');
-        await subscribeToLiveTranscription();
-
-        updateStatus('Listening...');
-        document.getElementById('status').classList.add('active');
-        addDebugLine('App fully initialized', false, true);
-
-      } catch (e) {
-        updateStatus('Error');
-        addDebugLine(`ERROR: ${e.message}`, true);
-        document.getElementById('status').classList.remove('active');
-      }
-    }
-
-    // Initialize using ZoomSdk.config() for newer SDK versions
-    addDebugLine('Initializing ZoomSdk.config()...', false, true);
-    updateStatus('Configuring SDK...');
-
-    let configTimeoutId = null;
-
-    if (ZoomSdk && typeof ZoomSdk.config === 'function') {
-      // Start 5-second timeout
-      configTimeoutId = setTimeout(() => {
-        if (!sdkReady) {
-          addDebugLine('ZoomSdk.config() timeout - no response after 5 seconds', true);
-          updateStatus('Config timeout');
-          // Try fallback
-          addDebugLine('Attempting fallback to window.load...', false, true);
-        }
-      }, 5000);
-
-      // Call config with empty capabilities array for initial test
-      addDebugLine('Calling ZoomSdk.config({ capabilities: [] })...');
-      ZoomSdk.config({
-        capabilities: []
-      }).then(() => {
-        clearTimeout(configTimeoutId);
-        addDebugLine('ZoomSdk.config() resolved successfully!', false, true);
-        updateStatus('SDK Ready');
-        initializeApp();
-      }).catch((err) => {
-        clearTimeout(configTimeoutId);
-        addDebugLine(`ZoomSdk.config() rejected with error:`, true);
-        addDebugLine(`  Error: ${err.message}`, true);
-        if (err.stack) {
-          addDebugLine(`  Stack: ${err.stack}`, true);
-        }
-        updateStatus('Config Error');
-        // Try fallback to window load anyway
-        addDebugLine('Attempting fallback to window.load...', false, true);
-      });
-    } else {
-      addDebugLine('ZoomSdk.config is not available', true);
-      updateStatus('No config method');
-    }
-
-    // Fallback: Also try window load event
-    addDebugLine('Setting up window.addEventListener(load) fallback...');
-    window.addEventListener('load', () => {
-      addDebugLine('window.load event fired', false, true);
-      if (!sdkReady) {
-        addDebugLine('Triggering initializeApp from window.load', false, true);
-        initializeApp();
-      } else {
-        addDebugLine('App already initialized, skipping window.load init');
-      }
-    });
-
-    function setupEventListeners() {
-      // Primary listener for live transcription
-      addDebugLine('Registering onLiveTranscriptionMessageReceived listener...');
-      ZoomSdk.addEventListener('onLiveTranscriptionMessageReceived', async (event) => {
-        addDebugLine(`[EVENT FIRED] onLiveTranscriptionMessageReceived`, false, true);
-        console.log('onLiveTranscriptionMessageReceived:', event);
-
-        // Extract caption text from payload
-        let caption = null;
-        if (event.payload) {
-          caption = event.payload.text || event.payload.message || event.payload.caption;
-        }
-
-        if (caption) {
-          addDebugLine(`Transcript received: ${caption.substring(0, 50)}...`);
-          await processCaption(caption);
-        }
-      });
-      addDebugLine('onLiveTranscriptionMessageReceived registered', false, true);
-
-      // Secondary listeners for other possible events
-      const eventNames = [
-        'onLiveTranscriptionMessage',
-        'onTranscriptionMessage',
-        'onCaption',
-        'onCaptionMessage',
-        'onActiveSpeaker',
-        'onMyActiveSpeakerChange',
-        'onMeetingTranscription',
-        'onCaptionStatusChange'
-      ];
-
-      eventNames.forEach((eventName) => {
-        ZoomSdk.addEventListener(eventName, async (event) => {
-          console.log(`[EVENT FIRED: ${eventName}]`, event);
-          addDebugLine(`[EVENT FIRED] ${eventName}`, false, true);
-
-          // Try to extract caption text from various payload structures
-          let caption = null;
-          if (event.payload) {
-            caption = event.payload.text || event.payload.caption || event.payload.message;
-          }
-
-          if (caption) {
-            addDebugLine(`Transcript (${eventName}): ${caption.substring(0, 50)}...`);
-            await processCaption(caption);
-          }
-        });
-      });
-
-      // Setup manual input form
-      document.getElementById('testInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          sendManualInput();
-        }
-      });
-
-      addDebugLine(`Event listeners registered for ${eventNames.length + 1} events`, false, true);
-    }
-
-    async function subscribeToLiveTranscription() {
-      addDebugLine('--- Transcription Subscription ---', false, true);
-
-      // Try getLiveTranscription first (primary method)
-      if (typeof ZoomSdk.getLiveTranscription === 'function') {
-        try {
-          addDebugLine('Calling ZoomSdk.getLiveTranscription()...');
-          const result = await ZoomSdk.getLiveTranscription();
-          addDebugLine('getLiveTranscription() success', false, true);
-          if (result) {
-            addDebugLine(`Result: ${JSON.stringify(result)}`);
-          }
-          return;
-        } catch (e) {
-          addDebugLine(`getLiveTranscription() error: ${e.message}`, true);
-        }
-      } else {
-        addDebugLine('ZoomSdk.getLiveTranscription not available', true);
-      }
-
-      // Try startLiveTranscription
-      if (typeof ZoomSdk.startLiveTranscription === 'function') {
-        try {
-          addDebugLine('Calling ZoomSdk.startLiveTranscription()...');
-          const result = await ZoomSdk.startLiveTranscription();
-          addDebugLine('startLiveTranscription() success', false, true);
-          if (result) {
-            addDebugLine(`Result: ${JSON.stringify(result)}`);
-          }
-          return;
-        } catch (e) {
-          addDebugLine(`startLiveTranscription() error: ${e.message}`, true);
-        }
-      } else {
-        addDebugLine('ZoomSdk.startLiveTranscription not available', true);
-      }
-
-      // Try subscribeToTranscription
-      if (typeof ZoomSdk.subscribeToTranscription === 'function') {
-        try {
-          addDebugLine('Calling ZoomSdk.subscribeToTranscription()...');
-          const result = await ZoomSdk.subscribeToTranscription();
-          addDebugLine('subscribeToTranscription() success', false, true);
-          if (result) {
-            addDebugLine(`Result: ${JSON.stringify(result)}`);
-          }
-          return;
-        } catch (e) {
-          addDebugLine(`subscribeToTranscription() error: ${e.message}`, true);
-        }
-      } else {
-        addDebugLine('ZoomSdk.subscribeToTranscription not available', true);
-      }
-
-      // Try enableLiveTranscription
-      if (typeof ZoomSdk.enableLiveTranscription === 'function') {
-        try {
-          addDebugLine('Calling ZoomSdk.enableLiveTranscription()...');
-          const result = await ZoomSdk.enableLiveTranscription();
-          addDebugLine('enableLiveTranscription() success', false, true);
-          if (result) {
-            addDebugLine(`Result: ${JSON.stringify(result)}`);
-          }
-          return;
-        } catch (e) {
-          addDebugLine(`enableLiveTranscription() error: ${e.message}`, true);
-        }
-      } else {
-        addDebugLine('ZoomSdk.enableLiveTranscription not available', true);
-      }
-
-      addDebugLine('No transcription methods available', true);
-    }
-
     async function processCaption(caption) {
       if (!caption || caption.trim() === '') return;
 
@@ -328,6 +91,7 @@
       const text = input.value.trim();
       if (text) {
         console.log('[MANUAL INPUT] Sending:', text);
+        addDebugLine(`[MANUAL] Sending: ${text}`);
         processCaption(text);
         input.value = '';
         input.focus();
@@ -345,6 +109,116 @@
                     (p[1] ? '<div class="ans-detail">' + p[1].trim() + '</div>' : '');
       ar.insertBefore(e, ar.firstChild);
     }
+
+    // === NEW INITIALIZATION PATTERN ===
+    addDebugLine('Script loaded, waiting for window.load event...', false, true);
+    updateStatus('Loading SDK...');
+
+    window.addEventListener('load', function() {
+      addDebugLine('window.load event fired', false, true);
+
+      if (typeof ZoomSdk !== 'undefined') {
+        addDebugLine('ZoomSdk object found', false, true);
+        updateStatus('SDK Available');
+
+        // Set up ZoomSdk.onReady as property
+        addDebugLine('Setting ZoomSdk.onReady callback...', false, true);
+        ZoomSdk.onReady = function() {
+          addDebugLine('[onReady] ZoomSdk.onReady fired!', false, true);
+          updateStatus('SDK Ready');
+
+          // Try to get app context
+          try {
+            addDebugLine('[onReady] Getting app context...');
+            ZoomSdk.getAppContext().then((ctx) => {
+              meetingId = ctx.meetingID;
+              addDebugLine(`[onReady] Meeting ID: ${meetingId}`, false, true);
+
+              // Try getSupportedJsApis
+              addDebugLine('[onReady] Calling getSupportedJsApis()...');
+              ZoomSdk.getSupportedJsApis().then((apis) => {
+                addDebugLine(`[onReady] Available APIs: ${apis.length}`, false, true);
+                apis.slice(0, 10).forEach(api => {
+                  addDebugLine(`  • ${api}`);
+                });
+                if (apis.length > 10) {
+                  addDebugLine(`  ... and ${apis.length - 10} more`);
+                }
+
+                updateStatus('Listening...');
+                document.getElementById('status').classList.add('active');
+                addDebugLine('[onReady] App initialized successfully', false, true);
+                sdkReady = true;
+              }).catch((err) => {
+                addDebugLine(`[onReady] getSupportedJsApis error: ${err.message}`, true);
+              });
+            }).catch((err) => {
+              addDebugLine(`[onReady] getAppContext error: ${err.message}`, true);
+            });
+          } catch (e) {
+            addDebugLine(`[onReady] Error: ${e.message}`, true);
+          }
+        };
+        addDebugLine('ZoomSdk.onReady callback set', false, true);
+
+        // Register onLiveTranscriptionMessageReceived listener
+        addDebugLine('Registering onLiveTranscriptionMessageReceived listener...', false, true);
+        ZoomSdk.addEventListener('onLiveTranscriptionMessageReceived', function(event) {
+          addDebugLine('[EVENT] onLiveTranscriptionMessageReceived fired!', false, true);
+          console.log('[EVENT] onLiveTranscriptionMessageReceived:', event);
+
+          try {
+            let caption = null;
+            if (event.payload) {
+              caption = event.payload.text || event.payload.message || event.payload.caption;
+            }
+
+            if (caption) {
+              addDebugLine(`[EVENT] Transcript: ${caption.substring(0, 60)}...`, false, true);
+              processCaption(caption);
+            }
+          } catch (e) {
+            addDebugLine(`[EVENT] Error processing transcript: ${e.message}`, true);
+          }
+        });
+        addDebugLine('onLiveTranscriptionMessageReceived listener registered', false, true);
+
+        // Try alternative API method
+        addDebugLine('Trying ZoomSdk.callZoomApi(getSupportedJsApis)...');
+        try {
+          ZoomSdk.callZoomApi('getSupportedJsApis', {}).then((result) => {
+            addDebugLine('[callZoomApi] getSupportedJsApis result:', false, true);
+            addDebugLine(`  ${JSON.stringify(result).substring(0, 100)}...`);
+          }).catch((err) => {
+            addDebugLine(`[callZoomApi] Error: ${err.message}`, true);
+          });
+        } catch (e) {
+          addDebugLine(`[callZoomApi] Exception: ${e.message}`, true);
+        }
+
+        // Setup manual input form
+        document.getElementById('testInput').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            sendManualInput();
+          }
+        });
+        addDebugLine('Manual input form ready');
+
+      } else {
+        addDebugLine('ZoomSdk object NOT found!', true);
+        updateStatus('SDK Not Loaded');
+      }
+    });
+
+    // Fallback timeout in case window.load never fires
+    setTimeout(() => {
+      if (!sdkReady && typeof ZoomSdk !== 'undefined') {
+        addDebugLine('10s timeout: Triggering init manually', false, true);
+        if (ZoomSdk.onReady) {
+          ZoomSdk.onReady();
+        }
+      }
+    }, 10000);
   </script>
 </body>
 </html>
