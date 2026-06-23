@@ -20,8 +20,14 @@ async def lifespan(app: FastAPI):
     """Server lifespan context manager"""
     # Startup
     print("STARTUP: Connecting to Zoom WebSocket...")
-    asyncio.create_task(connect_zoom_websocket())
+    try:
+        asyncio.create_task(connect_zoom_websocket())
+        print("STARTUP: ✓ WebSocket connection task created")
+    except Exception as e:
+        print(f"STARTUP: ✗ Failed to create WebSocket task: {e}")
+
     yield
+
     # Shutdown
     print("SHUTDOWN: Server closing...")
 
@@ -173,12 +179,6 @@ async def connect_to_rtms(rtms_url: str, access_token: str, meeting_id: str):
     except Exception as e:
         print(f"[RTMS] ✗ Connection error for meeting {meeting_id}: {e}")
         rtms_connections.pop(meeting_id, None)
-
-@app.on_event("startup")
-async def startup_event():
-    """Start Zoom event WebSocket connection on server startup"""
-    print("Server starting up...")
-    asyncio.create_task(connect_to_zoom_events())
 
 @app.get("/")
 async def root():
