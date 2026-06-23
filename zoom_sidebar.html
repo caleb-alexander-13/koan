@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="https://appssdk.zoom.us/1.5.0/zoomsdk.js" defer="false"></script>
   <meta charset="UTF-8">
   <title>Koan</title>
   <style>
@@ -110,168 +109,74 @@
       ar.insertBefore(e, ar.firstChild);
     }
 
-    // === NEW INITIALIZATION PATTERN ===
-    addDebugLine('Script loaded, waiting for window.load event...', false, true);
-    updateStatus('Loading SDK...');
+    // === ZOOM SDK INITIALIZATION ===
+    // ZoomSdk is injected by Zoom client, not loaded from CDN
+    addDebugLine('Page loaded, waiting for DOMContentLoaded...', false, true);
+    updateStatus('Initializing...');
 
-    // Check for ZoomSdk at script start
-    addDebugLine('Checking for ZoomSdk at script start...', false, true);
-    addDebugLine(`  typeof ZoomSdk: ${typeof ZoomSdk}`, false, true);
-    addDebugLine(`  window.ZoomSdk: ${typeof window.ZoomSdk}`, false, true);
-    addDebugLine(`  window.zoom_sdk: ${typeof window.zoom_sdk}`, false, true);
-    addDebugLine(`  window.__zoom__: ${typeof window.__zoom__}`, false, true);
+    document.addEventListener('DOMContentLoaded', function() {
+      addDebugLine('DOMContentLoaded event fired', false, true);
 
-    // Log all window properties containing "zoom"
-    addDebugLine('Searching window for properties containing "zoom"...', false, true);
-    let zoomProps = [];
-    for (let key in window) {
-      if (key.toLowerCase().includes('zoom')) {
-        zoomProps.push(key);
-        addDebugLine(`  Found: window.${key}`, false, true);
-      }
-    }
-    if (zoomProps.length === 0) {
-      addDebugLine('  No window properties containing "zoom" found', true);
-    } else {
-      addDebugLine(`Total zoom-related properties: ${zoomProps.length}`, false, true);
-    }
+      // Check if ZoomSdk was pre-injected by Zoom client
+      if (typeof ZoomSdk !== 'undefined') {
+        addDebugLine('ZoomSdk global object found!', false, true);
+        updateStatus('SDK Configuring...');
 
-    window.addEventListener('load', function() {
-      addDebugLine('window.load event fired', false, true);
-
-      // Check again after load
-      addDebugLine('Checking for ZoomSdk after window.load...', false, true);
-      addDebugLine(`  typeof ZoomSdk: ${typeof ZoomSdk}`, false, true);
-      addDebugLine(`  window.ZoomSdk: ${typeof window.ZoomSdk}`, false, true);
-      addDebugLine(`  window.zoom_sdk: ${typeof window.zoom_sdk}`, false, true);
-      addDebugLine(`  window.__zoom__: ${typeof window.__zoom__}`, false, true);
-
-      // Re-check for zoom properties
-      addDebugLine('Re-checking window for zoom properties after load...', false, true);
-      let zoomPropsAfter = [];
-      for (let key in window) {
-        if (key.toLowerCase().includes('zoom')) {
-          zoomPropsAfter.push(key);
-          if (!zoomProps.includes(key)) {
-            addDebugLine(`  NEW: window.${key}`, false, true);
-          }
-        }
-      }
-      if (zoomPropsAfter.length === 0) {
-        addDebugLine('  Still no zoom properties found!', true);
-      }
-
-      // Try to use whichever ZoomSdk reference exists
-      let ZoomSdkRef = window.ZoomSdk || window.zoom_sdk || window.__zoom__;
-
-      if (ZoomSdkRef) {
-        addDebugLine(`Using ZoomSdk reference: found`, false, true);
-        updateStatus('SDK Available');
-        const ZoomSdk = ZoomSdkRef;
-
-        // Set up ZoomSdk.onReady as property
-        addDebugLine('Setting ZoomSdk.onReady callback...', false, true);
-        ZoomSdk.onReady = function() {
-          addDebugLine('[onReady] ZoomSdk.onReady fired!', false, true);
+        // Call ZoomSdk.config() with minimal capabilities
+        addDebugLine('Calling ZoomSdk.config({ capabilities: [] })...', false, true);
+        ZoomSdk.config({
+          capabilities: []
+        }).then(() => {
+          addDebugLine('ZoomSdk.config() resolved successfully!', false, true);
           updateStatus('SDK Ready');
 
-          // Try to get app context
-          try {
-            addDebugLine('[onReady] Getting app context...');
-            ZoomSdk.getAppContext().then((ctx) => {
-              meetingId = ctx.meetingID;
-              addDebugLine(`[onReady] Meeting ID: ${meetingId}`, false, true);
+          // Register listener for live transcription messages
+          addDebugLine('Registering onLiveTranscriptionMessageReceived listener...', false, true);
+          ZoomSdk.addEventListener('onLiveTranscriptionMessageReceived', function(event) {
+            addDebugLine('[TRANSCRIPT] onLiveTranscriptionMessageReceived fired!', false, true);
+            console.log('[TRANSCRIPT]', event);
 
-              // Try getSupportedJsApis
-              addDebugLine('[onReady] Calling getSupportedJsApis()...');
-              ZoomSdk.getSupportedJsApis().then((apis) => {
-                addDebugLine(`[onReady] Available APIs: ${apis.length}`, false, true);
-                apis.slice(0, 10).forEach(api => {
-                  addDebugLine(`  • ${api}`);
-                });
-                if (apis.length > 10) {
-                  addDebugLine(`  ... and ${apis.length - 10} more`);
-                }
+            try {
+              let caption = null;
+              if (event.payload) {
+                caption = event.payload.text || event.payload.message || event.payload.caption;
+              }
 
-                updateStatus('Listening...');
-                document.getElementById('status').classList.add('active');
-                addDebugLine('[onReady] App initialized successfully', false, true);
-                sdkReady = true;
-              }).catch((err) => {
-                addDebugLine(`[onReady] getSupportedJsApis error: ${err.message}`, true);
-              });
-            }).catch((err) => {
-              addDebugLine(`[onReady] getAppContext error: ${err.message}`, true);
-            });
-          } catch (e) {
-            addDebugLine(`[onReady] Error: ${e.message}`, true);
-          }
-        };
-        addDebugLine('ZoomSdk.onReady callback set', false, true);
-
-        // Register onLiveTranscriptionMessageReceived listener
-        addDebugLine('Registering onLiveTranscriptionMessageReceived listener...', false, true);
-        ZoomSdk.addEventListener('onLiveTranscriptionMessageReceived', function(event) {
-          addDebugLine('[EVENT] onLiveTranscriptionMessageReceived fired!', false, true);
-          console.log('[EVENT] onLiveTranscriptionMessageReceived:', event);
-
-          try {
-            let caption = null;
-            if (event.payload) {
-              caption = event.payload.text || event.payload.message || event.payload.caption;
+              if (caption) {
+                addDebugLine(`[TRANSCRIPT] Received: ${caption.substring(0, 50)}...`, false, true);
+                processCaption(caption);
+              }
+            } catch (e) {
+              addDebugLine(`[TRANSCRIPT] Error: ${e.message}`, true);
             }
-
-            if (caption) {
-              addDebugLine(`[EVENT] Transcript: ${caption.substring(0, 60)}...`, false, true);
-              processCaption(caption);
-            }
-          } catch (e) {
-            addDebugLine(`[EVENT] Error processing transcript: ${e.message}`, true);
-          }
-        });
-        addDebugLine('onLiveTranscriptionMessageReceived listener registered', false, true);
-
-        // Try alternative API method
-        addDebugLine('Trying ZoomSdk.callZoomApi(getSupportedJsApis)...');
-        try {
-          ZoomSdk.callZoomApi('getSupportedJsApis', {}).then((result) => {
-            addDebugLine('[callZoomApi] getSupportedJsApis result:', false, true);
-            addDebugLine(`  ${JSON.stringify(result).substring(0, 100)}...`);
-          }).catch((err) => {
-            addDebugLine(`[callZoomApi] Error: ${err.message}`, true);
           });
-        } catch (e) {
-          addDebugLine(`[callZoomApi] Exception: ${e.message}`, true);
-        }
+          addDebugLine('Listener registered successfully', false, true);
 
-        // Setup manual input form
-        document.getElementById('testInput').addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            sendManualInput();
-          }
+          // Setup manual input form
+          document.getElementById('testInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              sendManualInput();
+            }
+          });
+
+          updateStatus('Listening...');
+          document.getElementById('status').classList.add('active');
+          addDebugLine('App fully initialized', false, true);
+          sdkReady = true;
+
+        }).catch((err) => {
+          addDebugLine(`ZoomSdk.config() failed: ${err.message}`, true);
+          updateStatus('Config Error');
+          addDebugLine(`Full error: ${JSON.stringify(err)}`, true);
         });
-        addDebugLine('Manual input form ready');
 
       } else {
-        addDebugLine('ZoomSdk object NOT found!', true);
-        updateStatus('SDK Not Loaded');
+        addDebugLine('ERROR: ZoomSdk not found!', true);
+        addDebugLine('ZoomSdk should be pre-injected by Zoom client', true);
+        addDebugLine('Check: this must run inside Zoom app, not standalone browser', true);
+        updateStatus('SDK Not Found');
       }
     });
-
-    // Fallback timeout in case window.load never fires
-    setTimeout(() => {
-      if (!sdkReady) {
-        let ZoomSdkRef = window.ZoomSdk || window.zoom_sdk || window.__zoom__;
-        if (ZoomSdkRef) {
-          addDebugLine('10s timeout: Triggering init manually', false, true);
-          if (ZoomSdkRef.onReady) {
-            ZoomSdkRef.onReady();
-          }
-        } else {
-          addDebugLine('10s timeout: ZoomSdk still not found', true);
-        }
-      }
-    }, 10000);
   </script>
 </body>
 </html>
