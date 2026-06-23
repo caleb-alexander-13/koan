@@ -3303,11 +3303,32 @@ window.ZoomSdk = zoomSdk;
       const ar = document.getElementById('answers');
       if (ar.textContent === 'Listening...') ar.innerHTML = '';
 
-      const p = answer.answer.split('\n...\n');
+      // Log full answer structure for debugging
+      addDebugLine('[DISPLAY] Full answer object:', false, true);
+      addDebugLine(`  ${JSON.stringify(answer).substring(0, 200)}...`, false, true);
+
+      // Safely extract answer text with fallbacks
+      let answerText = '';
+      if (typeof answer === 'string') {
+        answerText = answer;
+      } else if (answer && typeof answer === 'object') {
+        answerText = answer.answer || answer.text || answer.result || answer.message || '';
+        if (!answerText && typeof answerText !== 'string') {
+          answerText = JSON.stringify(answer);
+        }
+      }
+
+      if (!answerText || answerText.trim() === '') {
+        addDebugLine('[DISPLAY] Warning: No answer text found in response', true);
+        answerText = '[No answer text found]';
+      }
+
+      addDebugLine(`[DISPLAY] Extracted text: ${answerText.substring(0, 60)}...`, false, true);
+
+      // Create and display answer element
       const e = document.createElement('div');
       e.className = 'answer';
-      e.innerHTML = '<div class="ans-primary">' + p[0].trim() + '</div>' +
-                    (p[1] ? '<div class="ans-detail">' + p[1].trim() + '</div>' : '');
+      e.innerHTML = '<div class="ans-primary">' + answerText.trim() + '</div>';
       ar.insertBefore(e, ar.firstChild);
     }
 
