@@ -3201,6 +3201,9 @@ var zoomSdk = (function () {
     return index;
 
 })();
+
+// Expose the inlined SDK as global ZoomSdk for access in app code
+window.ZoomSdk = zoomSdk;
   </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
