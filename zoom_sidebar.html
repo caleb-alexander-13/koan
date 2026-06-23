@@ -3316,10 +3316,25 @@ window.ZoomSdk = zoomSdk;
 
       addDebugLine(`[DISPLAY] Showing answer: ${answerText.substring(0, 60)}...`, false, true);
 
-      // Create and display answer element
+      // Split answer on '\n...\n' separator
+      const parts = answerText.split('\n...\n');
+      const primaryAnswer = parts[0].trim();
+      let detailText = '';
+
+      // Extract detail from brackets and remove them
+      if (parts[1]) {
+        detailText = parts[1].trim();
+        // Remove surrounding brackets if present
+        if (detailText.startsWith('[') && detailText.endsWith(']')) {
+          detailText = detailText.slice(1, -1);
+        }
+      }
+
+      // Create and display answer element with two-part styling
       const e = document.createElement('div');
       e.className = 'answer';
-      e.innerHTML = '<div class="ans-primary">' + answerText.trim() + '</div>';
+      e.innerHTML = '<div class="ans-primary">' + primaryAnswer + '</div>' +
+                    (detailText ? '<div class="ans-detail">' + detailText + '</div>' : '');
       ar.insertBefore(e, ar.firstChild);
     }
 
