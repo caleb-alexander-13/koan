@@ -47,6 +47,103 @@ app.add_middleware(
 
 assistant = KoanAssistant()
 
+# Zoom environment variables
+ZOOM_WEBSOCKET_SECRET = os.getenv("ZOOM_WEBSOCKET_SECRET", "xHLWvrVmTt6xtFe36UxaMw")
+ZOOM_EVENT_WEBSOCKET_URL = "wss://ws.zoom.us/ws?subscriptionId=ncuuFdj6TOOvx4hjjoxMVQ"
+
+# Track Zoom event WebSocket connection
+zoom_event_websocket = None
+
+async def connect_to_zoom_events():
+    """Connect to Zoom's event WebSocket and listen for meeting events"""
+    global zoom_event_websocket
+
+    try:
+        print("Connecting to Zoom event WebSocket...")
+        async with websockets.connect(ZOOM_EVENT_WEBSOCKET_URL) as websocket:
+            zoom_event_websocket = websocket
+            print("Connected to Zoom event WebSocket")
+
+            # Start heartbeat task
+            heartbeat_task = asyncio.create_task(send_heartbeat(websocket))
+
+            try:
+                # Listen for incoming messages
+                async for message_str in websocket:
+                    try:
+                        message = json.loads(message_str)
+                        print(f"Zoom event received: {message.get('event')}")
+
+                        # Handle meeting.rtms_started event
+                        if message.get("event") == "meeting.rtms_started":
+                            payload = message.get("payload", {})
+                            server_urls = payload.get("server_urls", [])
+
+                            if server_urls:
+                                # Get the first server URL for RTMS
+                                rtms_url = server_urls[0] if isinstance(server_urls, list) else server_urls
+                                access_token = payload.get("access_token", "")
+                                meeting_id = payload.get("meeting_id", "unknown")
+
+                                if rtms_url and access_token:
+                                    print(f"RTMS started for meeting {meeting_id}")
+                                    # Connect to RTMS WebSocket
+                                    asyncio.create_task(connect_to_rtms(rtms_url, access_token, meeting_id))
+                    except json.JSONDecodeError:
+                        print(f"Could not parse Zoom event: {message_str[:100]}")
+                    except Exception as e:
+                        print(f"Error processing Zoom event: {e}")
+            finally:
+                heartbeat_task.cancel()
+                zoom_event_websocket = None
+    except Exception as e:
+        print(f"Zoom event WebSocket error: {e}")
+        zoom_event_websocket = None
+
+async def send_heartbeat(websocket):
+    """Send heartbeat to keep Zoom event WebSocket alive"""
+    try:
+        while True:
+            await asyncio.sleep(30)
+            heartbeat = {"module": "heartbeat"}
+            await websocket.send(json.dumps(heartbeat))
+            print("Heartbeat sent to Zoom event WebSocket")
+    except asyncio.CancelledError:
+        print("Heartbeat task cancelled")
+    except Exception as e:
+        print(f"Heartbeat error: {e}")
+
+async def connect_to_rtms(rtms_url: str, access_token: str, meeting_id: str):
+    """Connect to RTMS WebSocket and process transcript messages"""
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        async with websockets.connect(rtms_url, extra_headers=headers) as websocket:
+            print(f"RTMS WebSocket connected for meeting {meeting_id}")
+            rtms_connections[meeting_id] = websocket
+
+            try:
+                async for message_str in websocket:
+                    try:
+                        message = json.loads(message_str)
+                        await process_rtms_message(message, meeting_id)
+                    except json.JSONDecodeError:
+                        print(f"Could not parse RTMS message: {message_str[:100]}")
+                    except Exception as e:
+                        print(f"Error processing RTMS message: {e}")
+            finally:
+                rtms_connections.pop(meeting_id, None)
+                print(f"RTMS WebSocket closed for meeting {meeting_id}")
+    except Exception as e:
+        print(f"RTMS WebSocket error for meeting {meeting_id}: {e}")
+        rtms_connections.pop(meeting_id, None)
+
+@app.on_event("startup")
+async def startup_event():
+    """Start Zoom event WebSocket connection on server startup"""
+    print("Server starting up...")
+    asyncio.create_task(connect_to_zoom_events())
+
 @app.get("/")
 async def root():
     return {"status": "Koan server is running", "version": "0.1.0"}
@@ -120,31 +217,6 @@ async def process_rtms_message(message: dict, meeting_id: str):
         except Exception as e:
             print(f"Error processing RTMS transcript: {e}")
 
-async def rtms_websocket_handler(ws_url: str, access_token: str, meeting_id: str):
-    """Connect to RTMS WebSocket and process transcript messages"""
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    try:
-        async with websockets.connect(ws_url, subprotocols=["sip"], extra_headers=headers) as websocket:
-            print(f"RTMS WebSocket connected for meeting {meeting_id}")
-            rtms_connections[meeting_id] = websocket
-
-            try:
-                async for message_str in websocket:
-                    try:
-                        message = json.loads(message_str)
-                        await process_rtms_message(message, meeting_id)
-                    except json.JSONDecodeError:
-                        print(f"Could not parse RTMS message: {message_str[:100]}")
-                    except Exception as e:
-                        print(f"Error processing RTMS message: {e}")
-            finally:
-                rtms_connections.pop(meeting_id, None)
-                print(f"RTMS WebSocket closed for meeting {meeting_id}")
-    except Exception as e:
-        print(f"RTMS WebSocket error for meeting {meeting_id}: {e}")
-        rtms_connections.pop(meeting_id, None)
-
 @app.post("/zoom/webhook")
 async def zoom_webhook(request: Request):
     """Handle Zoom webhook events with HMAC validation"""
@@ -196,7 +268,7 @@ async def zoom_webhook(request: Request):
             if ws_url and access_token:
                 print(f"RTMS started for meeting {meeting_id}")
                 # Start background WebSocket connection
-                asyncio.create_task(rtms_websocket_handler(ws_url, access_token, meeting_id))
+                asyncio.create_task(connect_to_rtms(ws_url, access_token, meeting_id))
                 return {"status": "ok", "message": "RTMS connection started"}
             else:
                 print(f"Missing ws_url or access_token for meeting {meeting_id}")
