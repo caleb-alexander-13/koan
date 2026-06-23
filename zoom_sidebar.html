@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <script src="https://appssdk.zoom.us/1.5.0/zoomsdk.js" defer="false"></script>
   <meta charset="UTF-8">
   <title>Koan</title>
-  <script src="https://appssdk.zoom.us/sdk.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: white; padding: 16px; }
@@ -114,12 +114,60 @@
     addDebugLine('Script loaded, waiting for window.load event...', false, true);
     updateStatus('Loading SDK...');
 
+    // Check for ZoomSdk at script start
+    addDebugLine('Checking for ZoomSdk at script start...', false, true);
+    addDebugLine(`  typeof ZoomSdk: ${typeof ZoomSdk}`, false, true);
+    addDebugLine(`  window.ZoomSdk: ${typeof window.ZoomSdk}`, false, true);
+    addDebugLine(`  window.zoom_sdk: ${typeof window.zoom_sdk}`, false, true);
+    addDebugLine(`  window.__zoom__: ${typeof window.__zoom__}`, false, true);
+
+    // Log all window properties containing "zoom"
+    addDebugLine('Searching window for properties containing "zoom"...', false, true);
+    let zoomProps = [];
+    for (let key in window) {
+      if (key.toLowerCase().includes('zoom')) {
+        zoomProps.push(key);
+        addDebugLine(`  Found: window.${key}`, false, true);
+      }
+    }
+    if (zoomProps.length === 0) {
+      addDebugLine('  No window properties containing "zoom" found', true);
+    } else {
+      addDebugLine(`Total zoom-related properties: ${zoomProps.length}`, false, true);
+    }
+
     window.addEventListener('load', function() {
       addDebugLine('window.load event fired', false, true);
 
-      if (typeof ZoomSdk !== 'undefined') {
-        addDebugLine('ZoomSdk object found', false, true);
+      // Check again after load
+      addDebugLine('Checking for ZoomSdk after window.load...', false, true);
+      addDebugLine(`  typeof ZoomSdk: ${typeof ZoomSdk}`, false, true);
+      addDebugLine(`  window.ZoomSdk: ${typeof window.ZoomSdk}`, false, true);
+      addDebugLine(`  window.zoom_sdk: ${typeof window.zoom_sdk}`, false, true);
+      addDebugLine(`  window.__zoom__: ${typeof window.__zoom__}`, false, true);
+
+      // Re-check for zoom properties
+      addDebugLine('Re-checking window for zoom properties after load...', false, true);
+      let zoomPropsAfter = [];
+      for (let key in window) {
+        if (key.toLowerCase().includes('zoom')) {
+          zoomPropsAfter.push(key);
+          if (!zoomProps.includes(key)) {
+            addDebugLine(`  NEW: window.${key}`, false, true);
+          }
+        }
+      }
+      if (zoomPropsAfter.length === 0) {
+        addDebugLine('  Still no zoom properties found!', true);
+      }
+
+      // Try to use whichever ZoomSdk reference exists
+      let ZoomSdkRef = window.ZoomSdk || window.zoom_sdk || window.__zoom__;
+
+      if (ZoomSdkRef) {
+        addDebugLine(`Using ZoomSdk reference: found`, false, true);
         updateStatus('SDK Available');
+        const ZoomSdk = ZoomSdkRef;
 
         // Set up ZoomSdk.onReady as property
         addDebugLine('Setting ZoomSdk.onReady callback...', false, true);
@@ -212,10 +260,15 @@
 
     // Fallback timeout in case window.load never fires
     setTimeout(() => {
-      if (!sdkReady && typeof ZoomSdk !== 'undefined') {
-        addDebugLine('10s timeout: Triggering init manually', false, true);
-        if (ZoomSdk.onReady) {
-          ZoomSdk.onReady();
+      if (!sdkReady) {
+        let ZoomSdkRef = window.ZoomSdk || window.zoom_sdk || window.__zoom__;
+        if (ZoomSdkRef) {
+          addDebugLine('10s timeout: Triggering init manually', false, true);
+          if (ZoomSdkRef.onReady) {
+            ZoomSdkRef.onReady();
+          }
+        } else {
+          addDebugLine('10s timeout: ZoomSdk still not found', true);
         }
       }
     }, 10000);
