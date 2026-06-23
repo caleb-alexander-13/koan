@@ -3299,31 +3299,22 @@ window.ZoomSdk = zoomSdk;
       }
     }
 
-    function displayAnswer(caption, answer) {
+    function displayAnswer(caption, data) {
       const ar = document.getElementById('answers');
       if (ar.textContent === 'Listening...') ar.innerHTML = '';
 
-      // Log full answer structure for debugging
-      addDebugLine('[DISPLAY] Full answer object:', false, true);
-      addDebugLine(`  ${JSON.stringify(answer).substring(0, 200)}...`, false, true);
-
-      // Safely extract answer text with fallbacks
+      // Extract answer text from nested structure: data.answer.answer
       let answerText = '';
-      if (typeof answer === 'string') {
-        answerText = answer;
-      } else if (answer && typeof answer === 'object') {
-        answerText = answer.answer || answer.text || answer.result || answer.message || '';
-        if (!answerText && typeof answerText !== 'string') {
-          answerText = JSON.stringify(answer);
-        }
+      if (data && data.answer && data.answer.answer && typeof data.answer.answer === 'string') {
+        answerText = data.answer.answer;
       }
 
       if (!answerText || answerText.trim() === '') {
-        addDebugLine('[DISPLAY] Warning: No answer text found in response', true);
-        answerText = '[No answer text found]';
+        addDebugLine('[DISPLAY] No answer text found', true);
+        return;
       }
 
-      addDebugLine(`[DISPLAY] Extracted text: ${answerText.substring(0, 60)}...`, false, true);
+      addDebugLine(`[DISPLAY] Showing answer: ${answerText.substring(0, 60)}...`, false, true);
 
       // Create and display answer element
       const e = document.createElement('div');
@@ -3369,7 +3360,13 @@ window.ZoomSdk = zoomSdk;
             fetch('/api/answers')
               .then(res => res.json())
               .then(data => {
-                if (data.id && data.id !== lastAnswerId) {
+                // Only display if: answer exists, is different ID, and has non-empty answer text
+                if (data.id &&
+                    data.id !== lastAnswerId &&
+                    data.answer &&
+                    data.answer.answer &&
+                    typeof data.answer.answer === 'string' &&
+                    data.answer.answer.trim() !== '') {
                   lastAnswerId = data.id;
                   addDebugLine(`[POLL] New answer received (ID: ${data.id})`, false, true);
                   if (data.caption) {
