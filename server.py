@@ -9,9 +9,18 @@ import hmac
 import hashlib
 import base64
 import requests
+import uuid
 from retrieval_pipeline import KoanAssistant
 
 app = FastAPI()
+
+# In-memory store for latest answer
+latest_answer = {
+    "id": str(uuid.uuid4()),
+    "caption": "",
+    "answer": {"answer": ""},
+    "timestamp": 0
+}
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -140,6 +149,43 @@ async def process_caption(request: dict):
     caption = request.get("caption", "")
     if not caption:
         return {"error": "No caption provided"}
-    
+
     result = assistant.generate_answer(caption)
     return result
+
+@app.get("/api/answers")
+async def get_answers():
+    """Get the latest answer from in-memory store"""
+    global latest_answer
+    return latest_answer
+
+@app.post("/rtms/transcript")
+async def rtms_transcript(request: dict):
+    """Receive transcript from RTMS WebSocket, process it, and store the answer"""
+    global latest_answer
+
+    transcript = request.get("transcript", "")
+    if not transcript:
+        return {"error": "No transcript provided"}
+
+    try:
+        # Process the transcript through KoanAssistant
+        result = assistant.generate_answer(transcript)
+
+        # Store the latest answer with a new ID
+        latest_answer = {
+            "id": str(uuid.uuid4()),
+            "caption": transcript,
+            "answer": result,
+            "timestamp": time.time()
+        }
+
+        print(f"RTMS transcript processed: {transcript[:100]}... -> Answer stored")
+        return {
+            "status": "ok",
+            "id": latest_answer["id"],
+            "answer": result
+        }
+    except Exception as e:
+        print(f"RTMS transcript error: {e}")
+        return {"status": "error", "error": str(e)}

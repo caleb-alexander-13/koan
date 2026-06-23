@@ -3332,55 +3332,8 @@ window.ZoomSdk = zoomSdk;
           addDebugLine('ZoomSdk.config() resolved successfully!', false, true);
           updateStatus('SDK Ready');
 
-          // Request transcription access explicitly
-          addDebugLine('Calling ZoomSdk.getLiveTranscription()...', false, true);
-          try {
-            ZoomSdk.getLiveTranscription().then((result) => {
-              addDebugLine('ZoomSdk.getLiveTranscription() resolved:', false, true);
-              addDebugLine(`  Result: ${JSON.stringify(result)}`, false, true);
-            }).catch((err) => {
-              addDebugLine(`ZoomSdk.getLiveTranscription() error: ${err.message}`, true);
-            });
-          } catch (e) {
-            addDebugLine(`ZoomSdk.getLiveTranscription() exception: ${e.message}`, true);
-          }
-
-          // Register listeners for all possible transcription/caption events
-          const eventNames = [
-            'onLiveTranscriptionMessageReceived',
-            'onLiveTranscriptionMessage',
-            'onMeetingTranscriptionMessage',
-            'onTranscription',
-            'onCaptionMessage',
-            'onActiveSpeaker',
-            'onMyActiveSpeakerChange',
-            'onUserAudioStatusChange'
-          ];
-
-          eventNames.forEach((eventName) => {
-            addDebugLine(`Registering listener for ${eventName}...`, false, true);
-            ZoomSdk.addEventListener(eventName, function(event) {
-              addDebugLine(`[EVENT FIRED] ${eventName}`, false, true);
-              addDebugLine(`  Full event data: ${JSON.stringify(event)}`, false, true);
-              console.log(`[${eventName}]`, event);
-
-              // Try to process caption from common payload structures
-              try {
-                let caption = null;
-                if (event.payload) {
-                  caption = event.payload.text || event.payload.message || event.payload.caption;
-                }
-
-                if (caption) {
-                  addDebugLine(`  Caption text: ${caption.substring(0, 60)}...`, false, true);
-                  processCaption(caption);
-                }
-              } catch (e) {
-                addDebugLine(`  Error processing event: ${e.message}`, true);
-              }
-            });
-          });
-          addDebugLine(`All ${eventNames.length} event listeners registered`, false, true);
+          // SDK initialized successfully - start polling backend for answers
+          addDebugLine('SDK configured, starting polling architecture...', false, true);
 
           // Setup manual input form
           document.getElementById('testInput').addEventListener('keypress', (e) => {
@@ -3389,9 +3342,30 @@ window.ZoomSdk = zoomSdk;
             }
           });
 
+          // Start polling GET /api/answers every 2 seconds
+          let lastAnswerId = null;
+          const pollInterval = setInterval(() => {
+            fetch('/api/answers')
+              .then(res => res.json())
+              .then(data => {
+                if (data.id && data.id !== lastAnswerId) {
+                  lastAnswerId = data.id;
+                  addDebugLine(`[POLL] New answer received (ID: ${data.id})`, false, true);
+                  if (data.caption) {
+                    addDebugLine(`[POLL] Caption: ${data.caption.substring(0, 60)}...`);
+                  }
+                  displayAnswer(data.caption || 'Transcript', data);
+                }
+              })
+              .catch(err => {
+                addDebugLine(`[POLL] Error: ${err.message}`, true);
+              });
+          }, 2000);
+
+          addDebugLine('Polling started (2s interval)', false, true);
           updateStatus('Listening...');
           document.getElementById('status').classList.add('active');
-          addDebugLine('App fully initialized, waiting for transcript events', false, true);
+          addDebugLine('App fully initialized, polling /api/answers', false, true);
           sdkReady = true;
 
         }).catch((err) => {
