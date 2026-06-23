@@ -65,6 +65,11 @@ async def get_zoom_sidebar():
     with open("zoom_sidebar.html") as f:
         return Response(content=f.read(), media_type="text/html")
 
+@app.head("/zoom/sidebar")
+async def head_zoom_sidebar():
+    """Handle HEAD requests for /zoom/sidebar endpoint"""
+    return Response(status_code=200)
+
 @app.post("/api/answer")
 async def get_answer(request: dict):
     result = assistant.generate_answer(request.get("text", ""))
@@ -145,16 +150,33 @@ async def zoom_webhook(request: Request):
     """Handle Zoom webhook events with HMAC validation"""
     body = await request.body()
 
-    # Validate webhook signature
-    signature = request.headers.get("x-zm-signature")
-    timestamp = request.headers.get("x-zm-request-timestamp")
-
-    if not validate_zoom_webhook(body, signature, timestamp):
-        print("Invalid webhook signature")
-        return {"status": "error", "message": "Invalid signature"}
-
     try:
         data = json.loads(body)
+
+        # Handle endpoint.url_validation (URL validation challenge during setup)
+        # This doesn't require signature validation yet since it's part of registration
+        if data.get("event") == "endpoint.url_validation":
+            plain_token = data.get("payload", {}).get("plainToken", "")
+            if plain_token:
+                # Encrypt plainToken with ZOOM_WEBHOOK_SECRET using HMAC SHA256
+                encrypted_token = hmac.new(
+                    ZOOM_WEBHOOK_SECRET.encode(),
+                    plain_token.encode(),
+                    hashlib.sha256
+                ).hexdigest()
+                print(f"URL validation successful")
+                return {
+                    "plainToken": plain_token,
+                    "encryptedToken": encrypted_token
+                }
+
+        # Validate webhook signature for all other events
+        signature = request.headers.get("x-zm-signature")
+        timestamp = request.headers.get("x-zm-request-timestamp")
+
+        if not validate_zoom_webhook(body, signature, timestamp):
+            print("Invalid webhook signature")
+            return {"status": "error", "message": "Invalid signature"}
 
         # Handle webhook challenge for verification
         if "challenge" in data:
