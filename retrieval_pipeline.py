@@ -14,6 +14,29 @@ class KoanAssistant:
         self.index = pc.Index("cavalli-knowledge")
         self.pc = pc
 
+    def extract_keywords(self, question):
+        """Extract core topic keywords from question using Claude Haiku"""
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=20,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Extract 2-3 core topic keywords from this question.
+Strip out filler words, names, dates, and months.
+Return only the keywords, separated by spaces.
+
+Question: "{question}"
+Keywords:"""
+                }]
+            )
+            keywords = response.content[0].text.strip().lower()
+            print(f"Keywords extracted: '{question}' → '{keywords}'")
+            return keywords if keywords else question
+        except Exception as e:
+            print(f"Keyword extraction error: {e}, falling back to original question")
+            return question
+
     def retrieve(self, query):
         try:
             embedding = self.pc.inference.embed(
@@ -35,7 +58,9 @@ class KoanAssistant:
         return None
 
     def generate_answer(self, question):
-        fact = self.retrieve(question)
+        # Extract keywords before vector search
+        search_query = self.extract_keywords(question)
+        fact = self.retrieve(search_query)
 
         if fact:
             prompt = f"""Fact: "{fact}"
