@@ -10,6 +10,8 @@ import hashlib
 import base64
 import requests
 import uuid
+import asyncio
+import websockets
 from retrieval_pipeline import KoanAssistant
 
 app = FastAPI()
@@ -21,6 +23,9 @@ latest_answer = {
     "answer": {"answer": ""},
     "timestamp": 0
 }
+
+# Track active RTMS WebSocket connections
+rtms_connections = {}
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -67,24 +72,128 @@ async def get_answer(request: dict):
 
 ZOOM_WEBHOOK_SECRET = os.getenv("ZOOM_WEBHOOK_SECRET", "hnEpcWPYTmOR5wg9R-YtKw")
 
+def validate_zoom_webhook(request_body: bytes, signature: str, timestamp: str) -> bool:
+    """Validate webhook authenticity using HMAC"""
+    if not signature or not timestamp:
+        return False
+
+    # Reconstruct the signed content: timestamp + body
+    message = f"{timestamp}{request_body.decode()}"
+
+    # Compute HMAC SHA256
+    expected_signature = "v0=" + hmac.new(
+        ZOOM_WEBHOOK_SECRET.encode(),
+        message.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    # Compare signatures securely
+    return hmac.compare_digest(signature, expected_signature)
+
+async def process_rtms_message(message: dict, meeting_id: str):
+    """Process a message from RTMS WebSocket"""
+    global latest_answer
+
+    # Look for transcript in message
+    transcript = None
+    if message.get("msg_type") == "TRANSCRIPT":
+        transcript = message.get("transcript", "")
+    elif "transcript" in message:
+        transcript = message.get("transcript", "")
+
+    if transcript and isinstance(transcript, str) and transcript.strip():
+        print(f"RTMS transcript received: {transcript[:100]}...")
+        try:
+            result = assistant.generate_answer(transcript)
+            latest_answer = {
+                "id": str(uuid.uuid4()),
+                "caption": transcript,
+                "answer": result,
+                "timestamp": time.time()
+            }
+            print(f"Answer stored with ID: {latest_answer['id']}")
+        except Exception as e:
+            print(f"Error processing RTMS transcript: {e}")
+
+async def rtms_websocket_handler(ws_url: str, access_token: str, meeting_id: str):
+    """Connect to RTMS WebSocket and process transcript messages"""
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        async with websockets.connect(ws_url, subprotocols=["sip"], extra_headers=headers) as websocket:
+            print(f"RTMS WebSocket connected for meeting {meeting_id}")
+            rtms_connections[meeting_id] = websocket
+
+            try:
+                async for message_str in websocket:
+                    try:
+                        message = json.loads(message_str)
+                        await process_rtms_message(message, meeting_id)
+                    except json.JSONDecodeError:
+                        print(f"Could not parse RTMS message: {message_str[:100]}")
+                    except Exception as e:
+                        print(f"Error processing RTMS message: {e}")
+            finally:
+                rtms_connections.pop(meeting_id, None)
+                print(f"RTMS WebSocket closed for meeting {meeting_id}")
+    except Exception as e:
+        print(f"RTMS WebSocket error for meeting {meeting_id}: {e}")
+        rtms_connections.pop(meeting_id, None)
+
 @app.post("/zoom/webhook")
 async def zoom_webhook(request: Request):
-    """Handle Zoom webhook events"""
+    """Handle Zoom webhook events with HMAC validation"""
     body = await request.body()
-    
+
+    # Validate webhook signature
+    signature = request.headers.get("x-zm-signature")
+    timestamp = request.headers.get("x-zm-request-timestamp")
+
+    if not validate_zoom_webhook(body, signature, timestamp):
+        print("Invalid webhook signature")
+        return {"status": "error", "message": "Invalid signature"}
+
     try:
         data = json.loads(body)
-        
+
+        # Handle webhook challenge for verification
         if "challenge" in data:
             return {
                 "challengeToken": data["challenge"]
             }
-        
-        if data.get("event") == "meeting.transcript_caption_created":
-            caption = data.get("payload", {}).get("object", {}).get("caption", "")
+
+        event = data.get("event")
+        payload = data.get("payload", {})
+        meeting_id = payload.get("meeting_id", "unknown")
+
+        # Handle RTMS started event
+        if event == "meeting.rtms_started":
+            ws_url = payload.get("ws_url")
+            access_token = payload.get("access_token")
+
+            if ws_url and access_token:
+                print(f"RTMS started for meeting {meeting_id}")
+                # Start background WebSocket connection
+                asyncio.create_task(rtms_websocket_handler(ws_url, access_token, meeting_id))
+                return {"status": "ok", "message": "RTMS connection started"}
+            else:
+                print(f"Missing ws_url or access_token for meeting {meeting_id}")
+                return {"status": "error", "message": "Missing RTMS parameters"}
+
+        # Handle RTMS stopped event
+        elif event == "meeting.rtms_stopped":
+            print(f"RTMS stopped for meeting {meeting_id}")
+            # Close WebSocket if exists
+            if meeting_id in rtms_connections:
+                await rtms_connections[meeting_id].close()
+            return {"status": "ok", "message": "RTMS connection stopped"}
+
+        # Handle other events
+        elif event == "meeting.transcript_caption_created":
+            caption = payload.get("object", {}).get("caption", "")
             if caption:
                 print(f"Caption received: {caption}")
-        
+
         return {"status": "ok"}
     except Exception as e:
         print(f"Webhook error: {e}")
