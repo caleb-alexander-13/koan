@@ -155,24 +155,42 @@ async def process_caption(request: dict):
 
 @app.get("/api/answers")
 async def get_answers():
-    """Get the latest answer from in-memory store"""
+    """Get the latest answer from in-memory store if valid"""
     global latest_answer
-    return latest_answer
+
+    # Only return if answer has non-empty answer string and confidence > 0
+    if (latest_answer.get("answer") and
+        isinstance(latest_answer["answer"], dict) and
+        latest_answer["answer"].get("answer") and
+        isinstance(latest_answer["answer"]["answer"], str) and
+        latest_answer["answer"]["answer"].strip() != "" and
+        latest_answer["answer"].get("confidence", 0) > 0):
+        return latest_answer
+
+    # Return empty answer structure if no valid answer yet
+    return {
+        "id": str(uuid.uuid4()),
+        "caption": "",
+        "answer": {"answer": ""},
+        "timestamp": 0
+    }
 
 @app.post("/rtms/transcript")
 async def rtms_transcript(request: dict):
     """Receive transcript from RTMS WebSocket, process it, and store the answer"""
     global latest_answer
 
-    transcript = request.get("transcript", "")
-    if not transcript:
-        return {"error": "No transcript provided"}
+    # Extract transcript from request
+    transcript = request.get("transcript", "") if isinstance(request, dict) else ""
+
+    if not transcript or not isinstance(transcript, str) or transcript.strip() == "":
+        return {"error": "No valid transcript provided"}
 
     try:
-        # Process the transcript through KoanAssistant
+        # Use exact same logic as /api/answer endpoint
         result = assistant.generate_answer(transcript)
 
-        # Store the latest answer with a new ID
+        # Store the latest answer with a new ID and timestamp
         latest_answer = {
             "id": str(uuid.uuid4()),
             "caption": transcript,
@@ -180,7 +198,9 @@ async def rtms_transcript(request: dict):
             "timestamp": time.time()
         }
 
-        print(f"RTMS transcript processed: {transcript[:100]}... -> Answer stored")
+        print(f"RTMS transcript processed: {transcript[:100]}...")
+        print(f"  Answer stored with ID: {latest_answer['id']}")
+
         return {
             "status": "ok",
             "id": latest_answer["id"],
